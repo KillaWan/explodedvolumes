@@ -583,7 +583,6 @@ int main() {
     glDeleteShader(fragmentShader);
     
     glEnable(GL_DEPTH_TEST);
-    printf("%s", std::to_string(dims[0]).c_str());
 
     // 渲染循环
     while (!glfwWindowShouldClose(window)) {

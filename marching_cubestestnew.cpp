@@ -394,6 +394,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     // Positive yoffset (scroll up) increases zoom (zooms in)
     // Negative yoffset (scroll down) decreases zoom (zooms out)
+    std::cout << "Scroll event: yoffset = " << yoffset << std::endl;
     camera.zoom -= yoffset * 0.2f;  // Increased sensitivity
     if (camera.zoom < 0.1f) camera.zoom = 0.1f;
     if (camera.zoom > 6.0f) camera.zoom = 6.0f;  // Allow higher maximum zoom
@@ -794,64 +795,69 @@ int main() {
     
     // Enable wireframe mode for debugging if needed
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
     
-    // Rendering loop
     while (!glfwWindowShouldClose(window)) {
-        // Process input
+        // 处理输入：按 ESC 关闭窗口
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
         
-        // Clear the screen
+        // 清屏
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        // Get framebuffer size for aspect ratio calculation
+        // 获取帧缓冲区尺寸，计算宽高比
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = static_cast<float>(width) / static_cast<float>(height);
         
-        // Use shader program
+        // 使用你的着色器程序
         glUseProgram(shaderProgram);
         
-        // Create model matrix with scaling to normalize dimensions
+        // ----------------- 构造 Model 矩阵 -----------------
+        // 初始为单位矩阵
         glm::mat4 model = glm::mat4(1.0f);
         
-        // Scale to make the model appear much larger in the viewport
-        float scale_factor = 10.0f / max_dimension;  // Significantly increased for larger appearance
+        // 先缩放
+        // 这里我们希望模型看起来更大，为了适应视野，采用一个固定系数（例如10）除以模型最大尺寸
+        float scale_factor = 20.0f / max_dimension;
         model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
         
-        // Center the model
-        model = glm::translate(model, glm::vec3(-center.x, -center.y, -center.z));
-        
-        // Create view matrix from camera position
+        // 然后平移，使得模型居中（即把模型中心移动到原点）
+        glm::vec3 glmCenter(center.x, center.y, center.z);
+        model = glm::translate(model, -glmCenter);
+                
+        // ----------------- 构造 View 矩阵 -----------------
         glm::mat4 view = glm::mat4(1.0f);
-        
-        // Apply camera transformations
+        // 先平移：将摄像机沿 z 轴向后移动，根据摄像机的 distance 和 zoom 参数
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -camera.distance * camera.zoom));
+        // 然后旋转：绕 x 轴和 y 轴旋转（单位为弧度）
         view = glm::rotate(view, glm::radians(camera.rotationX), glm::vec3(1.0f, 0.0f, 0.0f));
         view = glm::rotate(view, glm::radians(camera.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
         
-        // Create projection matrix
+        // ----------------- 构造 Projection 矩阵 -----------------
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
         
-        // Set uniform values
+        // 计算 MVP：注意这里使用了分别的 model、view、projection 矩阵
+        // 并将它们传给对应的 uniform 变量
         int modelLoc = glGetUniformLocation(shaderProgram, "model");
-        int viewLoc = glGetUniformLocation(shaderProgram, "view");
-        int projLoc = glGetUniformLocation(shaderProgram, "projection");
+        int viewLoc  = glGetUniformLocation(shaderProgram, "view");
+        int projLoc  = glGetUniformLocation(shaderProgram, "projection");
         
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
         
-        // Render the model
+        // ----------------- 绘制模型 -----------------
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
         
-        // Swap buffers and poll events
+        // 交换缓冲和处理事件
         glfwSwapBuffers(window);
         glfwPollEvents();
-    }
+    }    
     
     // Clean up
     glDeleteVertexArrays(1, &VAO);
