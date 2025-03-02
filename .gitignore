@@ -6,6 +6,7 @@
 *.out
 app.dSYM
 app
+dependencies
 
 # 忽略 IDE 相关文件
 .vscode/
