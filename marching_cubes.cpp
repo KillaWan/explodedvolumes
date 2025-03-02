@@ -121,27 +121,42 @@
  
  // =========== 读取 NIfTI 文件 ===========
  bool loadNiiFile(const char* filename, float*& data, int dims[3]) {
-     nifti_image* nim = nifti_image_read(filename, 1);
-     if (!nim) {
-         std::cerr << "读取 NIfTI 文件失败: " << filename << std::endl;
-         return false;
-     }
-     dims[0] = nim->nx;
-     dims[1] = nim->ny;
-     dims[2] = nim->nz;
- 
-     if (nim->datatype != NIFTI_TYPE_FLOAT32) {
-         std::cerr << "警告：本示例假设 float32 数据，但实际类型是 " << nim->datatype << std::endl;
-     }
-     data = static_cast<float*>(nim->data);
-     if (!data) {
-         std::cerr << "数据指针为空" << std::endl;
-         return false;
-     }
-     // 如果你需要在函数外长期使用 data，注意不要调用 nifti_image_free(nim)，
-     // 或者你可以把 data 复制到新的缓冲区中再释放 nim。
-     return true;
- }
+    nifti_image* nim = nifti_image_read(filename, 1);
+    if (!nim) {
+        std::cerr << "读取 NIfTI 文件失败: " << filename << std::endl;
+        return false;
+    }
+    dims[0] = nim->nx;
+    dims[1] = nim->ny;
+    dims[2] = nim->nz;
+
+    // 如果是 float32，直接用
+    if (nim->datatype == NIFTI_TYPE_FLOAT32) {
+        data = static_cast<float*>(nim->data);
+    }
+    // 如果是 uint8 (datatype=2)，做手动转换
+    else if (nim->datatype == NIFTI_TYPE_UINT8) {
+        auto* src = static_cast<uint8_t*>(nim->data);
+        size_t nvox = static_cast<size_t>(nim->nvox);  // 总体素数
+        float* temp = new float[nvox];
+        for (size_t i = 0; i < nvox; i++) {
+            temp[i] = static_cast<float>(src[i]);
+        }
+        data = temp;
+    }
+    else {
+        std::cerr << "不支持的类型: " << nim->datatype << std::endl;
+        nifti_image_free(nim);
+        return false;
+    }
+
+    // 注意：如果直接使用 nim->data，就别调用 nifti_image_free(nim)；  
+    // 如果你做了拷贝(temp)，可以在此处 free(nim)：
+    // nifti_image_free(nim);
+
+    return true;
+}
+
  
  // =========== Marching Cubes 核心函数：polygoniseCube ===========
  // 对一个立方体单元进行多边形化，返回生成的三角形顶点
