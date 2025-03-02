@@ -307,7 +307,7 @@
      // =========== 读取 NIfTI 文件 ===========
      float* volumeData = nullptr;
      int dims[3] = {0,0,0};
-     const char* niiFilename = "your_file.nii"; // 换成你的 NIfTI 文件
+     const char* niiFilename = "chris_MRA.nii"; // 换成你的 NIfTI 文件
      if (!loadNiiFile(niiFilename, volumeData, dims)) {
          std::cerr << "无法读取 NIfTI 文件" << std::endl;
          return -1;
@@ -415,5 +415,5 @@
      }
  
      // =========== 清理 ===========
-  
+    }
  

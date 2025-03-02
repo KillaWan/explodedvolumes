@@ -4,12 +4,16 @@
 *.so
 *.exe
 *.out
+app.dSYM
+app
 
 # 忽略 IDE 相关文件
 .vscode/
 .idea/
 *.sublime-workspace
 .DS_Store
+
+
 
 # 忽略日志文件
 *.log
