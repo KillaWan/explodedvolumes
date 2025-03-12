@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <filesystem>
 #include <algorithm> // for std::max
 
 // GLAD & GLFW
@@ -9,6 +10,7 @@
 
 // NIfTI
 #include "nifti1_io.h"
+#include "file_dialog.h"
 
 // GLM for MVP matrix
 #include <glm/glm.hpp>
@@ -725,7 +727,11 @@ int main() {
     // Load NIfTI file
     float* volumeData = nullptr;
     int dims[3] = {0, 0, 0};
-    const char* niiFilename = "Iguana.nii"; // Replace with your NIfTI file path
+
+
+
+    const char* niiFilename = strdup(FileDialog::openFile("Open File", std::filesystem::current_path(), {{"NIfTI Files", "*.nii"}})[0].c_str());
+
     
     std::cout << "Loading NIfTI file: " << niiFilename << std::endl;
     if (!loadNiiFile(niiFilename, volumeData, dims)) {
@@ -815,7 +821,7 @@ int main() {
         // 使用你的着色器程序
         glUseProgram(shaderProgram);
         
-        // ----------------- 构造 Model 矩阵 -----------------
+        // 构造 Model 矩阵 
         // 初始为单位矩阵
         glm::mat4 model = glm::mat4(1.0f);
         
@@ -828,7 +834,7 @@ int main() {
         glm::vec3 glmCenter(center.x, center.y, center.z);
         model = glm::translate(model, -glmCenter);
                 
-        // ----------------- 构造 View 矩阵 -----------------
+        // 构造 View 矩阵
         glm::mat4 view = glm::mat4(1.0f);
         // 先平移：将摄像机沿 z 轴向后移动，根据摄像机的 distance 和 zoom 参数
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -camera.distance * camera.zoom));
@@ -836,7 +842,7 @@ int main() {
         view = glm::rotate(view, glm::radians(camera.rotationX), glm::vec3(1.0f, 0.0f, 0.0f));
         view = glm::rotate(view, glm::radians(camera.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
         
-        // ----------------- 构造 Projection 矩阵 -----------------
+        // 构造 Projection 矩阵
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
         
         // 计算 MVP：注意这里使用了分别的 model、view、projection 矩阵
@@ -849,7 +855,7 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
         
-        // ----------------- 绘制模型 -----------------
+        // 绘制模型
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
