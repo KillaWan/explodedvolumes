@@ -825,7 +825,7 @@ int main()
 
     // We'll keep a "live" isoLevel and a "temp" for the slider
     // Start in the middle of data range
-    float isoLevel = 0.5f * (min_val + max_val);
+    float isoLevel = 10.0f;
     float tempIsoLevel = isoLevel;
 
     std::cout << "Initial isoLevel = " << isoLevel << std::endl;
