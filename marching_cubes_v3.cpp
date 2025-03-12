@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <filesystem>
 #include <algorithm> // for std::max
 
 #include "imgui.h"
@@ -13,6 +14,7 @@
 
 // NIfTI
 #include "nifti1_io.h"
+#include "file_dialog.h"
 
 // GLM for MVP matrix
 #include <glm/glm.hpp>
@@ -807,7 +809,8 @@ int main()
     float min_val = 0.0f;
     float max_val = 0.0f;
 
-    const char *niiFilename = "Iguana.nii";
+    std::string filePath = FileDialog::openFile("Open File", std::filesystem::current_path(), {{"NIfTI Files", "*.nii"}})[0];
+    const char* niiFilename = filePath.c_str();
     std::cout << "Loading NIfTI file: " << niiFilename << std::endl;
 
     if (!loadNiiFile(niiFilename, volumeData, dims, min_val, max_val))
