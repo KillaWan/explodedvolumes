@@ -730,8 +730,9 @@ int main() {
 
 
 
-    const char* niiFilename = strdup(FileDialog::openFile("Open File", std::filesystem::current_path(), {{"NIfTI Files", "*.nii"}})[0].c_str());
-
+    std::string filePath = FileDialog::openFile("Open File", std::filesystem::current_path(), {{"NIfTI Files", "*.nii"}})[0];
+    const char* niiFilename = filePath.c_str();
+    
     
     std::cout << "Loading NIfTI file: " << niiFilename << std::endl;
     if (!loadNiiFile(niiFilename, volumeData, dims)) {
