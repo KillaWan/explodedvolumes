@@ -809,7 +809,7 @@ int main()
     float min_val = 0.0f;
     float max_val = 0.0f;
 
-    std::string filePath = FileDialog::openFile("Open File", std::filesystem::current_path(), {{"NIfTI Files", "*.nii"}})[0];
+    std::string filePath = FileDialog::openFile("Open File", std::filesystem::current_path().string(), {{"NIfTI Files", "*.nii"}})[0];
     const char* niiFilename = filePath.c_str();
     std::cout << "Loading NIfTI file: " << niiFilename << std::endl;
 
