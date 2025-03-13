@@ -885,6 +885,7 @@ int main()
         // --- ImGui Panel ---
         ImGui::Begin("Marching Cubes Control");
 
+        // TODO: change the range from 0 to 100
         ImGui::Text("Data range: %.1f to %.1f", min_val, max_val);
 
         // Slider from min_val to max_val
