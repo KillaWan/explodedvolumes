@@ -22,6 +22,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "marching_cubes_v3.h"
+#include "symmetry_axis.h"  
+
 
 
 
@@ -194,6 +196,26 @@ void main()
 }
 )glsl";
 
+const char *lineVertexShaderSource = R"glsl(
+    #version 330 core
+    layout (location = 0) in vec3 aPos;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    void main(){
+        gl_Position = projection * view * model * vec4(aPos, 1.0);
+    }
+    )glsl";
+    
+    const char *lineFragmentShaderSource = R"glsl(
+    #version 330 core
+    out vec4 FragColor;
+    void main(){
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color
+    }
+    )glsl";
+    
+
 // Window size change callback
 static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -263,6 +285,24 @@ unsigned int createShaderProgram()
     return shaderProgram;
 }
 
+unsigned int createLineShaderProgram() {
+    unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, lineVertexShaderSource);
+    unsigned int fragmentShader = compileShader(GL_FRAGMENT_SHADER, lineFragmentShaderSource);
+    unsigned int program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    int success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if(!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(program, 512, nullptr, infoLog);
+        std::cerr << "Line shader program linking failed:\n" << infoLog << std::endl;
+    }
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    return program;
+}
 
 int main()
 {
@@ -345,6 +385,31 @@ int main()
                                     max_bounds.z - min_bounds.z});
     camera.distance = max_dimension * 0.05f;
 
+    //exposion axis computing
+    Vec3 explosionAxis = computeExplosionAxis(vertices);
+    std::cout << "Computed explosion axis: (" 
+          << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
+          
+    Vertex axisStart, axisEnd;
+          axisStart.x = center.x;
+          axisStart.y = center.y;
+          axisStart.z = center.z;
+          float axisLength = max_dimension * 2.0f; // 根据需要调整线段长度
+          axisEnd.x = center.x + explosionAxis.x * axisLength;
+          axisEnd.y = center.y + explosionAxis.y * axisLength;
+          axisEnd.z = center.z + explosionAxis.z * axisLength;
+          
+    unsigned int axisVAO, axisVBO;
+    glGenVertexArrays(1, &axisVAO);
+    glGenBuffers(1, &axisVBO);
+    Vertex axisLine[2] = { axisStart, axisEnd };
+    glBindVertexArray(axisVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+          
     // 7) Create VAO/VBO/EBO
     unsigned int VAO, VBO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -368,6 +433,8 @@ int main()
 
     // 8) Create shader program
     unsigned int shaderProgram = createShaderProgram();
+    unsigned int lineShaderProgram = createLineShaderProgram();
+
 
     // 9) Enable depth test, cull
     glEnable(GL_DEPTH_TEST);
@@ -465,6 +532,24 @@ int main()
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+
+        // 设置较粗线宽
+        glLineWidth(5.0f);  
+        // 使用专用的线段着色器
+        glUseProgram(lineShaderProgram);
+
+        // 如果需要，将模型、视图、投影矩阵传递给线段着色器（通常与 mesh 一致）
+        int lineModelLoc = glGetUniformLocation(lineShaderProgram, "model");
+        int lineViewLoc  = glGetUniformLocation(lineShaderProgram, "view");
+        int lineProjLoc  = glGetUniformLocation(lineShaderProgram, "projection");
+        glUniformMatrix4fv(lineModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(lineViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(lineProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        // 绘制爆炸轴线段
+        glBindVertexArray(axisVAO);
+        glDrawArrays(GL_LINES, 0, 2);
+        glBindVertexArray(0);
+
 
         // Render ImGui
         ImGui::Render();
