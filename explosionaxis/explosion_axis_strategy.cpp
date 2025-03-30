@@ -1,6 +1,6 @@
 #include "explosionaxis/explosion_axis_strategy.h"
 #include "explosionaxis/mitra_rotational_symmetry_detector.h" 
-#include "explosionaxis/mirta_reflective_symmetry_detector.h"
+#include "explosionaxis/mitra_reflective_symmetry_detector.h"
 #include "explosionaxis/pca_analyzer.h"
 #include <iostream>
 
@@ -50,25 +50,25 @@ CombinedStrategy::~CombinedStrategy() {
 
 // CombinedStrategy 计算爆炸轴实现
 Vec3 CombinedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
-    std::cout << "使用组合策略计算爆炸轴" << std::endl;
+    std::cout << "Use combined strategies detecting explosion axis." << std::endl;
     
     // 步骤1: 检测旋转对称性
     Vec3 rotationAxis;
     int symmetryOrder;
     if (m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder)) {
-        std::cout << "使用旋转对称轴（阶数 " << symmetryOrder << "）" << std::endl;
+        std::cout << "Use rotational axis." << symmetryOrder << "）" << std::endl;
         return rotationAxis;
     }
     
     // 步骤2: 如果没有旋转对称性，检测反射对称性
     Vec3 reflectiveNormal;
     if (m_reflectionDetector->detect(meshVertices, reflectiveNormal)) {
-        std::cout << "使用镜面对称性和2D PCA" << std::endl;
+        std::cout << "Use reflectoion axis." << std::endl;
         return m_pcaAnalyzer->compute2DPCAOnPlane(meshVertices, reflectiveNormal);
     }
     
     // 步骤3: 如果没有任何对称性，使用3D PCA
-    std::cout << "未检测到对称性，使用3D PCA" << std::endl;
+    std::cout << "None symmetry，use 3D PCA." << std::endl;
     return m_pcaAnalyzer->compute3DPCA(meshVertices);
 }
 

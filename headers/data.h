@@ -19,6 +19,11 @@ namespace MC
         float x, y, z;
         Vec3() : x(0), y(0), z(0) {}
         Vec3(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {}
+        bool operator<(const Vec3& other) const {
+            if (x != other.x) return x < other.x;
+            if (y != other.y) return y < other.y;
+            return z < other.z;
+        }
     };
 
     // Mesh vertex

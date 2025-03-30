@@ -8,7 +8,7 @@ using namespace VectorOps;
 
 // 3D PCA：计算协方差矩阵，并返回第一主成分
 Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
-    std::cout << "执行3D PCA分析" << std::endl;
+    std::cout << "Excuete 3D PCA analyzation." << std::endl;
     
     Vec3 centroid = computeCentroid(meshVertices);
     Eigen::Matrix3f covMatrix = Eigen::Matrix3f::Zero();
@@ -35,7 +35,7 @@ Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
 
 // 2D PCA：将顶点投影到指定平面，然后在该平面上计算第一主成分，最后映射回3D
 Vec3 PCAAnalyzer::compute2DPCAOnPlane(const std::vector<Vertex>& meshVertices, const Vec3& planeNormal) {
-    std::cout << "执行2D PCA分析" << std::endl;
+    std::cout << "Excute 2D PCA analyzation." << std::endl;
     
     Vec3 n = normalize(planeNormal);
     Vec3 centroid = computeCentroid(meshVertices);
