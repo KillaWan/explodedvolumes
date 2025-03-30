@@ -136,11 +136,11 @@ void main() {
         std::cout << "Scroll event: yoffset = " << yoffset << std::endl;
         camera.zoom -= yoffset * 0.2f; // 增加灵敏度
 
-        // 限制缩放范围
-        if (camera.zoom < 0.1f)
-            camera.zoom = 0.1f;
-        if (camera.zoom > 6.0f)
-            camera.zoom = 6.0f;
+        // // 限制缩放范围
+        // if (camera.zoom < 0.1f)
+        //     camera.zoom = 0.1f;
+        // if (camera.zoom > 6.0f)
+        //     camera.zoom = 6.0f;
     }
 
     // Key callback for additional controls

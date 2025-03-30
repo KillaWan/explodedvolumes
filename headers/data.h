@@ -36,7 +36,7 @@ namespace MC
         float rotationX = 15.0f;  // Initial tilt down
         float rotationY = -45.0f; // Initial rotation for better view
         float distance = 5.0f;
-        float zoom = 5.0f; // Initial zoom for larger appearance
+        float zoom = 10.0f; // Initial zoom for larger appearance
     };
 
     // Volume data representation

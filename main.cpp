@@ -114,12 +114,10 @@ int main()
 
         // Build transform matrices (same as in renderFrame)
         glm::mat4 model(1.0f);
-        float scale_factor = 20.0f / mesh.max_dimension;
-        model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
-
-        // Center model
         glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
-        model = glm::translate(model, -glmCenter);
+        model = glm::translate(model, -glmCenter); // 先中心化
+        float scale_factor = 20.0f / mesh.max_dimension;
+        model = glm::scale(model, glm::vec3(scale_factor)); // 后缩放
 
         glm::mat4 view(1.0f);
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -camera.distance * camera.zoom));
