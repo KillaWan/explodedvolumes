@@ -1,0 +1,38 @@
+#pragma once
+
+#include "data.h"
+
+// 前向声明
+struct GLFWwindow;
+
+namespace MC
+{
+    extern Camera camera;
+    extern bool firstMouse;
+    extern float lastX, lastY;
+    
+    // 着色器相关函数
+    unsigned int compileShader(unsigned int type, const char *src);
+    unsigned int createShaderProgram();
+
+    // OpenGL渲染相关函数
+    void setupMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO);
+    void updateMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO);
+    void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
+                     const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
+                     const VolumeData &volumeData);
+
+    // UI相关函数
+    void setupImGui(GLFWwindow *window);
+    void cleanupImGui();
+
+    // 回调函数
+    void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+    void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+    void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+    void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+    // 初始化GLFW和GLAD
+    GLFWwindow *initOpenGL();
+
+} // namespace MC
