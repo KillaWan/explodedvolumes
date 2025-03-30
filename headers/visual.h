@@ -10,10 +10,11 @@ namespace MC
     extern Camera camera;
     extern bool firstMouse;
     extern float lastX, lastY;
-    
+
     // 着色器相关函数
     unsigned int compileShader(unsigned int type, const char *src);
     unsigned int createShaderProgram();
+    unsigned int createLineShaderProgram(); // Added for symmetry axis
 
     // OpenGL渲染相关函数
     void setupMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO);

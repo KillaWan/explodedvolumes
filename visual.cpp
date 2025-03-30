@@ -61,6 +61,28 @@ void main()
 }
 )glsl";
 
+    // Line shader for symmetry axis visualization
+    const char *lineVertexShaderSource = R"glsl(
+#version 330 core
+layout (location = 0) in vec3 aPos;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+}
+)glsl";
+
+    const char *lineFragmentShaderSource = R"glsl(
+#version 330 core
+out vec4 FragColor;
+
+void main() {
+    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the axis
+}
+)glsl";
+
     //---------------------- 回调函数实现 ----------------------
 
     // Window size change callback
@@ -178,6 +200,32 @@ void main()
             char infoLog[512];
             glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
             std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+        }
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+
+        return shaderProgram;
+    }
+
+    // Create shader program for line rendering
+    unsigned int createLineShaderProgram()
+    {
+        unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, lineVertexShaderSource);
+        unsigned int fragmentShader = compileShader(GL_FRAGMENT_SHADER, lineFragmentShaderSource);
+
+        unsigned int shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
+
+        int success;
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            char infoLog[512];
+            glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+            std::cerr << "Line shader program linking failed: " << infoLog << std::endl;
         }
 
         glDeleteShader(vertexShader);
