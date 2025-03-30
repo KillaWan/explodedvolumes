@@ -1,7 +1,7 @@
 #include "headers/data.h"
 #include "headers/marching_cubes.h"
 #include "headers/visual.h"
-#include "headers/symmetry_axis.h" // Add this include
+#include "headers/explosionaxis/explosion_axis_strategy.h" // Add this include
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -60,7 +60,7 @@ int main()
     generateMesh(volumeData, isoLevel, mesh);
 
     // Compute symmetry/explosion axis
-    Vec3 explosionAxis = computeExplosionAxis(mesh.vertices);
+    Vec3 explosionAxis = MC::computeExplosionAxis(mesh.vertices);
     std::cout << "Computed explosion axis: ("
               << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
 
