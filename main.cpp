@@ -66,13 +66,14 @@ int main()
 
     // Create axis line for visualization
     Vertex axisStart, axisEnd;
-    axisStart.x = mesh.center.x;
-    axisStart.y = mesh.center.y;
-    axisStart.z = mesh.center.z;
-    float axisLength = mesh.max_dimension * 2.0f; // Adjust line length as needed
-    axisEnd.x = mesh.center.x + explosionAxis.x * axisLength;
-    axisEnd.y = mesh.center.y + explosionAxis.y * axisLength;
-    axisEnd.z = mesh.center.z + explosionAxis.z * axisLength;
+    float halfLength = mesh.max_dimension * 2.0f;
+    axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
+    axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
+    axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
+    
+    axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
+    axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
+    axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
 
     // Create VAO/VBO for the symmetry axis line
     unsigned int axisVAO, axisVBO;
@@ -114,10 +115,12 @@ int main()
 
         // Build transform matrices (same as in renderFrame)
         glm::mat4 model(1.0f);
-        glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
-        model = glm::translate(model, -glmCenter); // 先中心化
         float scale_factor = 20.0f / mesh.max_dimension;
-        model = glm::scale(model, glm::vec3(scale_factor)); // 后缩放
+        model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
+
+        // Center model
+        glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
+        model = glm::translate(model, -glmCenter);
 
         glm::mat4 view(1.0f);
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -camera.distance * camera.zoom));
@@ -153,12 +156,15 @@ int main()
                       << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
 
             // Update the axis line vertices
-            axisStart.x = mesh.center.x;
-            axisStart.y = mesh.center.y;
-            axisStart.z = mesh.center.z;
-            axisEnd.x = mesh.center.x + explosionAxis.x * (mesh.max_dimension * 2.0f);
-            axisEnd.y = mesh.center.y + explosionAxis.y * (mesh.max_dimension * 2.0f);
-            axisEnd.z = mesh.center.z + explosionAxis.z * (mesh.max_dimension * 2.0f);
+            float halfLength = mesh.max_dimension * 2.0f;
+            axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
+            axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
+            axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
+            
+            axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
+            axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
+            axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
+            
 
             // Update the axis line VBO
             Vertex axisLine[2] = {axisStart, axisEnd};
