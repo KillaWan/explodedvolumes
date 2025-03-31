@@ -9,9 +9,14 @@
 #include <filesystem>
 
 #include "nifti1_io.h"
-
+#ifdef _WIN32
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#endif
+#endif
 namespace MC
 {
+
 
     // 3D vector for internal calculations
     struct Vec3
