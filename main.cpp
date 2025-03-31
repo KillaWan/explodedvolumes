@@ -120,8 +120,8 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         // 渲染当前帧
-        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData,
-                    intersectionVAO, planeIntersection.segments.size(), currentExplosionStrategy);
+        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData, currentExplosionStrategy,
+                    intersectionVAO, planeIntersection.segments.size());
 
         // Draw the symmetry axis line
         glLineWidth(5.0f); // Set line width

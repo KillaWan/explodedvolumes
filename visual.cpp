@@ -578,7 +578,7 @@ void main() {
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
-                     unsigned int intersectionVAO, int numIntersectionSegments, std::string &currentExplosionStrategy){
+                     std::string &currentExplosionStrategy, unsigned int intersectionVAO, int numIntersectionSegments){
         // clean screen
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
