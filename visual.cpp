@@ -21,6 +21,7 @@ namespace MC
     Camera camera;
     bool firstMouse = true;
     float lastX, lastY;
+    bool showIntersections = false; // 默认不显示交线
 
     //---------------------- 着色器源代码 ----------------------
 
@@ -160,6 +161,9 @@ void main() {
         {
             camera.distance *= 1.1f; // 拉远
         }
+
+        // 不再使用I键切换交线显示，改为完全通过UI控制
+        // 保留此处以便以后可以添加其他键盘快捷键
     }
 
     //---------------------- 着色器函数 ----------------------
@@ -274,7 +278,8 @@ void main() {
     // 渲染一帧
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
-                     const VolumeData &volumeData)
+                     const VolumeData &volumeData,
+                     unsigned int intersectionVAO, int numIntersectionSegments)
     {
         // clean screen
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -304,6 +309,19 @@ void main() {
         }
         ImGui::SameLine();
         ImGui::Text("Current ISO: %.1f", isoLevel);
+
+        // 添加交线显示控制
+        ImGui::Separator();
+        if (ImGui::Checkbox("Show Cutting Plane Intersections", &showIntersections))
+        {
+            std::cout << "Intersection display: " << (showIntersections ? "ON" : "OFF") << std::endl;
+        }
+
+        // 如果有交线可显示，添加一些额外信息
+        if (numIntersectionSegments > 0 && showIntersections)
+        {
+            ImGui::Text("Showing %d intersection segments", numIntersectionSegments);
+        }
 
         ImGui::End(); // end ImGui panel
 
@@ -344,6 +362,37 @@ void main() {
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+
+        // 如果启用了交线显示，绘制交线
+        if (showIntersections && intersectionVAO != 0 && numIntersectionSegments > 0)
+        {
+            // 使用简单的着色器来绘制红色线段
+            unsigned int simpleColorShader = createLineShaderProgram();
+            glUseProgram(simpleColorShader);
+
+            // 传递变换矩阵
+            int modelLoc = glGetUniformLocation(simpleColorShader, "model");
+            int viewLoc = glGetUniformLocation(simpleColorShader, "view");
+            int projLoc = glGetUniformLocation(simpleColorShader, "projection");
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+            // 设置线宽和颜色
+            glLineWidth(3.0f);
+
+            // 绘制交线
+            glBindVertexArray(intersectionVAO);
+            glDrawArrays(GL_LINES, 0, numIntersectionSegments * 2);
+            glBindVertexArray(0);
+
+            // 恢复线宽
+            glLineWidth(1.0f);
+
+            // 删除着色器程序
+            glDeleteProgram(simpleColorShader);
+        }
 
         // render ImGui
         ImGui::Render();

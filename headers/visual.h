@@ -10,6 +10,7 @@ namespace MC
     extern Camera camera;
     extern bool firstMouse;
     extern float lastX, lastY;
+    extern bool showIntersections; // 是否显示切割平面交线
 
     // 着色器相关函数
     unsigned int compileShader(unsigned int type, const char *src);
@@ -21,7 +22,8 @@ namespace MC
     void updateMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO);
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
-                     const VolumeData &volumeData);
+                     const VolumeData &volumeData,
+                     unsigned int intersectionVAO = 0, int numIntersectionSegments = 0);
 
     // UI相关函数
     void setupImGui(GLFWwindow *window);

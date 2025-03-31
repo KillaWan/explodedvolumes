@@ -1,7 +1,9 @@
 #include "headers/data.h"
 #include "headers/marching_cubes.h"
 #include "headers/visual.h"
-#include "headers/explosionaxis/explosion_axis_strategy.h" // Add this include
+#include "headers/explosionaxis/explosion_axis_strategy.h"
+#include "headers/selecting_planes.h"
+#include "headers/cutting_planes.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -55,7 +57,7 @@ int main()
 
     // initialize mesh and Marching Cubes
     Mesh mesh;
-    float isoLevel = 10.0f; 
+    float isoLevel = 10.0f;
     float tempIsoLevel = isoLevel;
     generateMesh(volumeData, isoLevel, mesh);
 
@@ -70,7 +72,7 @@ int main()
     axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
     axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
     axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
-    
+
     axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
     axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
     axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
@@ -98,11 +100,22 @@ int main()
     unsigned int VAO, VBO, EBO;
     setupMesh(mesh, VAO, VBO, EBO);
 
+    // 生成切割平面
+    std::vector<CuttingPlane> cuttingPlanes = generateUniformCuttingPlanes(mesh, explosionAxis, 5);
+
+    // 计算切割平面与网格的交线
+    PlaneIntersection planeIntersection = computePlaneIntersections(mesh, cuttingPlanes);
+
+    // 创建用于显示交线的VAO/VBO
+    unsigned int intersectionVAO, intersectionVBO;
+    setupIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
+
     // main loop
     while (!glfwWindowShouldClose(window))
     {
         // 渲染当前帧
-        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData);
+        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData,
+                    intersectionVAO, planeIntersection.segments.size());
 
         // Draw the symmetry axis line
         glLineWidth(5.0f); // Set line width
@@ -160,16 +173,24 @@ int main()
             axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
             axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
             axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
-            
+
             axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
             axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
             axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
-            
 
             // Update the axis line VBO
             Vertex axisLine[2] = {axisStart, axisEnd};
             glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
+
+            // 重新生成切割平面
+            cuttingPlanes = generateUniformCuttingPlanes(mesh, explosionAxis, 5);
+
+            // 重新计算切割平面与网格的交线
+            planeIntersection = computePlaneIntersections(mesh, cuttingPlanes);
+
+            // 更新交线VAO/VBO
+            updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
 
             lastIsoLevel = isoLevel;
         }
@@ -185,6 +206,8 @@ int main()
     glDeleteBuffers(1, &EBO);
     glDeleteVertexArrays(1, &axisVAO);
     glDeleteBuffers(1, &axisVBO);
+    glDeleteVertexArrays(1, &intersectionVAO);
+    glDeleteBuffers(1, &intersectionVBO);
     glDeleteProgram(shaderProgram);
     glDeleteProgram(lineShaderProgram);
 
