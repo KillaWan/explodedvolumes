@@ -20,6 +20,9 @@ public:
     virtual Vec3 computeAxis(const std::vector<Vertex>& meshVertices) = 0;
     virtual std::string getName() const = 0;
     
+    // 获取是否使用PCL优化的状态
+    virtual bool isPCLOptimized() const { return false; }
+    
     // 工厂方法，根据策略名称创建对应的策略实例
     static std::shared_ptr<ExplosionAxisStrategy> create(const std::string& strategyName);
     
@@ -36,6 +39,37 @@ public:
     
     Vec3 computeAxis(const std::vector<Vertex>& meshVertices) override;
     std::string getName() const override { return "Combined Strategy"; }
+    
+private:
+    std::unique_ptr<RotationalSymmetryDetector> m_rotationDetector;
+    std::unique_ptr<ReflectiveSymmetryDetector> m_reflectionDetector;
+    std::unique_ptr<PCAAnalyzer> m_pcaAnalyzer;
+};
+
+// PCL优化的组合式策略 - 使用PCL库实现的检测器提高性能
+class PCLOptimizedStrategy : public ExplosionAxisStrategy {
+public:
+    PCLOptimizedStrategy();
+    ~PCLOptimizedStrategy();
+    
+    Vec3 computeAxis(const std::vector<Vertex>& meshVertices) override;
+    std::string getName() const override { return "PCL Optimized Strategy"; }
+    bool isPCLOptimized() const override { return true; }
+    
+private:
+    std::unique_ptr<RotationalSymmetryDetector> m_rotationDetector;
+    std::unique_ptr<ReflectiveSymmetryDetector> m_reflectionDetector;
+    std::unique_ptr<PCAAnalyzer> m_pcaAnalyzer;
+};
+
+// Eigen优化的组合式策略 - 使用Eigen库实现的检测器提高性能和兼容性
+class EigenStrategy : public ExplosionAxisStrategy {
+public:
+    EigenStrategy();
+    ~EigenStrategy();
+    
+    Vec3 computeAxis(const std::vector<Vertex>& meshVertices) override;
+    std::string getName() const override { return "Eigen Strategy"; }
     
 private:
     std::unique_ptr<RotationalSymmetryDetector> m_rotationDetector;

@@ -14,7 +14,7 @@ bool MitraRotationalSymmetryDetector::detect(const std::vector<Vertex>& meshVert
                                              Vec3& outRotationAxis, 
                                              int& outSymmetryOrder) {
     // 1. 随机采样一部分点进行处理
-    int sampleCount = std::min(500, static_cast<int>(meshVertices.size() / 4));
+    int sampleCount = std::min(10, static_cast<int>(meshVertices.size() / 10));
     std::vector<Vertex> samples = randomSampling(meshVertices, sampleCount);
     
     // 2. 对这些采样点进行配对并在变换空间中投票

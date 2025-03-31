@@ -1,6 +1,10 @@
 #include "explosionaxis/explosion_axis_strategy.h"
 #include "explosionaxis/mitra_rotational_symmetry_detector.h" 
 #include "explosionaxis/mitra_reflective_symmetry_detector.h"
+#include "explosionaxis/pcl_rotational_symmetry_detector.h"
+#include "explosionaxis/pcl_reflective_symmetry_detector.h"
+#include "explosionaxis/eigen_rotational_symmetry_detector.h"
+#include "explosionaxis/eigen_reflective_symmetry_detector.h"
 #include "explosionaxis/pca_analyzer.h"
 #include <iostream>
 
@@ -11,13 +15,18 @@ std::shared_ptr<ExplosionAxisStrategy> ExplosionAxisStrategy::create(const std::
     if (strategyName == "Combined Strategy") {
         return std::make_shared<CombinedStrategy>();
     }
-    // 默认使用组合策略
+    else if (strategyName == "PCL Optimized Strategy") {
+        return std::make_shared<PCLOptimizedStrategy>();
+    }
+    else if (strategyName == "Eigen Strategy") {
+        return std::make_shared<EigenStrategy>();
+    }
     return std::make_shared<CombinedStrategy>();
 }
 
 // 获取可用策略列表
 std::vector<std::string> ExplosionAxisStrategy::getAvailableStrategies() {
-    return {"Combined Strategy"};
+    return {"Combined Strategy", "PCL Optimized Strategy", "Eigen Strategy"};
 }
 
 // CombinedStrategy 构造函数
@@ -56,19 +65,107 @@ Vec3 CombinedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
     Vec3 rotationAxis;
     int symmetryOrder;
     if (m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder)) {
-        std::cout << "Use rotational axis." << symmetryOrder << "）" << std::endl;
+        std::cout << "Use rotational axis (order " << symmetryOrder << ")" << std::endl;
         return rotationAxis;
     }
     
     // 步骤2: 如果没有旋转对称性，检测反射对称性
     Vec3 reflectiveNormal;
     if (m_reflectionDetector->detect(meshVertices, reflectiveNormal)) {
-        std::cout << "Use reflectoion axis." << std::endl;
+        std::cout << "Use reflection axis." << std::endl;
         return m_pcaAnalyzer->compute2DPCAOnPlane(meshVertices, reflectiveNormal);
     }
     
     // 步骤3: 如果没有任何对称性，使用3D PCA
-    std::cout << "None symmetry，use 3D PCA." << std::endl;
+    std::cout << "No symmetry detected, using 3D PCA." << std::endl;
+    return m_pcaAnalyzer->compute3DPCA(meshVertices);
+}
+
+// PCLOptimizedStrategy 构造函数
+PCLOptimizedStrategy::PCLOptimizedStrategy() {
+    // 创建PCL优化的旋转对称性检测器
+    m_rotationDetector = std::make_unique<SimplePCLRotationalSymmetryDetector>();
+    
+    // 创建PCL优化的反射对称性检测器
+    m_reflectionDetector = std::make_unique<SimplePCLReflectiveSymmetryDetector>();
+    
+    // 创建PCA分析器
+    m_pcaAnalyzer = std::make_unique<PCAAnalyzer>();
+    
+    std::cout << "Created PCL Optimized Strategy using PCL detectors" << std::endl;
+}
+
+// PCLOptimizedStrategy 析构函数
+PCLOptimizedStrategy::~PCLOptimizedStrategy() {
+    // 智能指针会自动处理内存释放
+}
+
+// PCLOptimizedStrategy 计算爆炸轴实现
+Vec3 PCLOptimizedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
+    std::cout << "Using PCL Optimized Strategy for explosion axis detection" << std::endl;
+    
+    // 步骤1: 检测旋转对称性
+    Vec3 rotationAxis;
+    int symmetryOrder;
+    
+    if (m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder)) {
+        std::cout << "Using PCL detected rotational symmetry axis (order " << symmetryOrder << ")" << std::endl;
+        return rotationAxis;
+    }
+    
+    // 步骤2: 如果没有旋转对称性，检测反射对称性
+    Vec3 reflectiveNormal;
+    if (m_reflectionDetector->detect(meshVertices, reflectiveNormal)) {
+        std::cout << "Using PCL detected reflective symmetry plane" << std::endl;
+        return m_pcaAnalyzer->compute2DPCAOnPlane(meshVertices, reflectiveNormal);
+    }
+    
+    // 步骤3: 如果没有任何对称性，使用3D PCA
+    std::cout << "No symmetry detected with PCL, using 3D PCA" << std::endl;
+    return m_pcaAnalyzer->compute3DPCA(meshVertices);
+}
+
+// EigenStrategy 构造函数
+EigenStrategy::EigenStrategy() {
+    // 创建Eigen优化的旋转对称性检测器
+    m_rotationDetector = std::make_unique<EigenRotationalSymmetryDetector>();
+    
+    // 创建Eigen优化的反射对称性检测器
+    m_reflectionDetector = std::make_unique<EigenReflectiveSymmetryDetector>();
+    
+    // 创建PCA分析器
+    m_pcaAnalyzer = std::make_unique<PCAAnalyzer>();
+    
+    std::cout << "Created Eigen Strategy using Eigen detectors" << std::endl;
+}
+
+// EigenStrategy 析构函数
+EigenStrategy::~EigenStrategy() {
+    // 智能指针会自动处理内存释放
+}
+
+// EigenStrategy 计算爆炸轴实现
+Vec3 EigenStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
+    std::cout << "Using Eigen Strategy for explosion axis detection" << std::endl;
+    
+    // 步骤1: 检测旋转对称性
+    Vec3 rotationAxis;
+    int symmetryOrder;
+    
+    if (m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder)) {
+        std::cout << "Using Eigen detected rotational symmetry axis (order " << symmetryOrder << ")" << std::endl;
+        return rotationAxis;
+    }
+    
+    // 步骤2: 如果没有旋转对称性，检测反射对称性
+    Vec3 reflectiveNormal;
+    if (m_reflectionDetector->detect(meshVertices, reflectiveNormal)) {
+        std::cout << "Using Eigen detected reflective symmetry plane" << std::endl;
+        return m_pcaAnalyzer->compute2DPCAOnPlane(meshVertices, reflectiveNormal);
+    }
+    
+    // 步骤3: 如果没有任何对称性，使用3D PCA
+    std::cout << "No symmetry detected with Eigen, using 3D PCA" << std::endl;
     return m_pcaAnalyzer->compute3DPCA(meshVertices);
 }
 
@@ -80,7 +177,7 @@ ExplosionAxisManager& ExplosionAxisManager::getInstance() {
 
 // ExplosionAxisManager 构造函数
 ExplosionAxisManager::ExplosionAxisManager() {
-    // 默认使用组合策略
+    // 默认使用Eigen优化策略以获得更好的性能和兼容性
     m_currentStrategy = std::make_shared<CombinedStrategy>();
 }
 
