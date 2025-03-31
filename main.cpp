@@ -4,6 +4,7 @@
 #include "headers/explosionaxis/explosion_axis_strategy.h"
 #include "headers/selecting_planes.h"
 #include "headers/cutting_planes.h"
+#include "headers/advanced_cutting_planes.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -107,10 +108,10 @@ int main()
     setupMesh(mesh, VAO, VBO, EBO);
 
     // 生成切割平面
-    std::vector<CuttingPlane> cuttingPlanes = generateUniformCuttingPlanes(mesh, explosionAxis, 5);
+    std::vector<CuttingPlane> cuttingPlanes = generateAdaptiveCuttingPlanes(mesh, explosionAxis, 5); //generateUniformCuttingPlanes(mesh, explosionAxis, 5);
 
     // 计算切割平面与网格的交线
-    PlaneIntersection planeIntersection = computePlaneIntersections(mesh, cuttingPlanes);
+    PlaneIntersection planeIntersection = computeAdvancedPlaneIntersections(mesh, cuttingPlanes); //computePlaneIntersections(mesh, cuttingPlanes);
 
     // 创建用于显示交线的VAO/VBO
     unsigned int intersectionVAO, intersectionVBO;
@@ -185,10 +186,10 @@ int main()
             glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
 
             // 重新生成切割平面
-            cuttingPlanes = generateUniformCuttingPlanes(mesh, explosionAxis, 5);
+            cuttingPlanes = generateAdaptiveCuttingPlanes(mesh, explosionAxis, 5); //generateUniformCuttingPlanes(mesh, explosionAxis, 5);
 
             // 重新计算切割平面与网格的交线
-            planeIntersection = computePlaneIntersections(mesh, cuttingPlanes);
+            planeIntersection = computeAdvancedPlaneIntersections(mesh, cuttingPlanes); //computePlaneIntersections(mesh, cuttingPlanes);
 
             // 更新交线VAO/VBO
             updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
