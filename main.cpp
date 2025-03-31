@@ -37,6 +37,10 @@ int main()
     // initialize ImGui
     setupImGui(window);
 
+    //symbol for explosion axis recalculate
+    bool recalculateExplosionAxis = false;
+    ImGui::GetIO().UserData = &recalculateExplosionAxis;
+
     // open NIfTI file
     std::string filePath = openNiftiFileDialog();
     if (filePath.empty())
@@ -62,6 +66,8 @@ int main()
     generateMesh(volumeData, isoLevel, mesh);
 
     // Compute symmetry/explosion axis
+    std::string currentExplosionStrategy = MC::ExplosionAxisConfig::convertToUIName(
+        MC::getCurrentExplosionStrategyName());
     Vec3 explosionAxis = MC::computeExplosionAxis(mesh.vertices);
     std::cout << "Computed explosion axis: ("
               << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
@@ -115,7 +121,7 @@ int main()
     {
         // 渲染当前帧
         renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData,
-                    intersectionVAO, planeIntersection.segments.size());
+                    intersectionVAO, planeIntersection.segments.size(), currentExplosionStrategy);
 
         // Draw the symmetry axis line
         glLineWidth(5.0f); // Set line width
@@ -193,6 +199,45 @@ int main()
             updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
 
             lastIsoLevel = isoLevel;
+        }
+        
+        static std::string lastStrategy = currentExplosionStrategy;
+        
+        // 从ImGui获取是否需要手动重新计算的标志
+        bool shouldRecalculate = recalculateExplosionAxis;
+        if (shouldRecalculate || lastStrategy != currentExplosionStrategy)
+        {
+            // 检查策略是否变化
+            if (lastStrategy != currentExplosionStrategy)
+            {
+                std::cout << "Strategy changed from " << lastStrategy 
+                        << " to " << currentExplosionStrategy << std::endl;
+                lastStrategy = currentExplosionStrategy;
+            }
+
+            // 重新计算爆炸轴
+            explosionAxis = computeExplosionAxis(mesh.vertices);
+            std::cout << "Updated explosion axis: ("
+                    << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
+            std::cout << "Using strategy: " << currentExplosionStrategy << std::endl;
+
+            // 更新轴线顶点
+            float halfLength = mesh.max_dimension * 2.0f;
+            axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
+            axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
+            axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
+            
+            axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
+            axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
+            axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
+            
+            // 更新轴线VBO
+            Vertex axisLine[2] = {axisStart, axisEnd};
+            glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
+            
+            // 重置标志
+            recalculateExplosionAxis = false;
         }
 
         // 交换缓冲区并处理事件

@@ -6,9 +6,44 @@ namespace MC {
 
 using namespace VectorOps;
 
+// 主方法：分析模型并确定主轴方向
+Vec3 PCAAnalyzer::analyzePrincipalAxis(const std::vector<Vertex>& meshVertices) {
+    std::cout << "Executing PCA analysis, using " 
+              << (m_useLongestAxis ? "longest" : "shortest") << " principal axis." << std::endl;
+    
+    Vec3 centroid = computeCentroid(meshVertices);
+    Eigen::Matrix3f covMatrix = Eigen::Matrix3f::Zero();
+    
+    for (const auto& vertex : meshVertices) {
+        Vec3 v(vertex.x - centroid.x, vertex.y - centroid.y, vertex.z - centroid.z);
+        covMatrix(0, 0) += v.x * v.x;
+        covMatrix(0, 1) += v.x * v.y;
+        covMatrix(0, 2) += v.x * v.z;
+        covMatrix(1, 0) += v.y * v.x;
+        covMatrix(1, 1) += v.y * v.y;
+        covMatrix(1, 2) += v.y * v.z;
+        covMatrix(2, 0) += v.z * v.x;
+        covMatrix(2, 1) += v.z * v.y;
+        covMatrix(2, 2) += v.z * v.z;
+    }
+    
+    covMatrix /= meshVertices.size();
+    
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(covMatrix);
+    
+    // 根据设置选择最长或最短主轴
+    int eigenVecIndex = m_useLongestAxis ? 2 : 0; // 2为最长轴，0为最短轴
+    Eigen::Vector3f eigenVec = solver.eigenvectors().col(eigenVecIndex);
+    
+    Vec3 axis(eigenVec(0), eigenVec(1), eigenVec(2));
+    std::cout << "Selected principal axis: (" << axis.x << ", " << axis.y << ", " << axis.z << ")" << std::endl;
+    
+    return normalize(axis);
+}
+
 // 3D PCA：计算协方差矩阵，并返回第一主成分
 Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
-    std::cout << "Excuete 3D PCA analyzation." << std::endl;
+    std::cout << "Execute 3D PCA analyzation." << std::endl;
     
     Vec3 centroid = computeCentroid(meshVertices);
     Eigen::Matrix3f covMatrix = Eigen::Matrix3f::Zero();
@@ -35,7 +70,7 @@ Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
 
 // 2D PCA：将顶点投影到指定平面，然后在该平面上计算第一主成分，最后映射回3D
 Vec3 PCAAnalyzer::compute2DPCAOnPlane(const std::vector<Vertex>& meshVertices, const Vec3& planeNormal) {
-    std::cout << "Excute 2D PCA analyzation." << std::endl;
+    std::cout << "Execute 2D PCA analyzation." << std::endl;
     
     Vec3 n = normalize(planeNormal);
     Vec3 centroid = computeCentroid(meshVertices);

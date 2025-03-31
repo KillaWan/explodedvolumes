@@ -1,4 +1,5 @@
 #include "explosionaxis/mitra_reflective_symmetry_detector.h"
+#include "explosionaxis/vector_ops.h"
 #include <iostream>
 #include <algorithm>
 #include <random>
@@ -11,8 +12,21 @@ using namespace VectorOps;
 // Mitra反射对称性检测严格实现
 bool MitraReflectiveSymmetryDetector::detect(const std::vector<Vertex>& meshVertices, 
                                              Vec3& outReflectiveNormal) {
+    // 如果设置了使用自定义法向，则直接使用它
+    if (m_useCustomNormal) {
+        std::cout << "Using custom reflective normal: (" 
+                  << m_customNormal.x << ", " << m_customNormal.y << ", " << m_customNormal.z 
+                  << ")" << std::endl;
+        outReflectiveNormal = normalize(m_customNormal);
+        return true;
+    }
+    
+    // 否则执行标准检测流程
+    std::cout << "Executing reflective symmetry detection with sample count: " 
+              << m_sampleCount << std::endl;
+              
     // 1. 随机采样一部分点进行处理
-    int sampleCount = std::min(10, static_cast<int>(meshVertices.size() / 10));
+    int sampleCount = std::min(m_sampleCount, static_cast<int>(meshVertices.size() / 10));
     std::vector<Vertex> samples = randomSampling(meshVertices, sampleCount);
     
     // 2. 对这些采样点进行配对并在变换空间中投票
@@ -24,6 +38,14 @@ bool MitraReflectiveSymmetryDetector::detect(const std::vector<Vertex>& meshVert
     // 4. 如果发现了候选对称平面，进行验证
     if (hasSymmetry) {
         hasSymmetry = verifySymmetry(meshVertices, outReflectiveNormal);
+    }
+    
+    // 如果检测失败，可以使用默认法向量作为备选
+    if (!hasSymmetry) {
+        std::cout << "Reflective symmetry detection failed, using default normal." << std::endl;
+        // outReflectiveNormal = {0.0f, 0.0f, 1.0f}; // 默认使用Z轴作为法向
+        // hasSymmetry = true;
+        return false;
     }
     
     return hasSymmetry;
@@ -105,7 +127,7 @@ std::map<Vec3, int> MitraReflectiveSymmetryDetector::pairPointsAndVote(
     }
     
     // 为每对具有相似签名的点投票
-    const float signatureThreshold = 0.1f; // 签名相似性阈值
+    const float signatureThreshold = 0.5f; // 签名相似性阈值
     
     for (size_t i = 0; i < samples.size(); ++i) {
         for (size_t j = i + 1; j < samples.size(); ++j) {
