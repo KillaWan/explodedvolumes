@@ -44,7 +44,7 @@ std::vector<std::string> ExplosionAxisStrategy::getAvailableStrategies() {
 
 //-------------- Rotational Strategy --------------//
 RotationalStrategy::RotationalStrategy() 
-    : m_detector(std::make_shared<MitraRotationalSymmetryDetector>()) {
+    : m_detector(std::make_shared<SimplePCLRotationalSymmetryDetector>()) {
 }
 
 RotationalStrategy::~RotationalStrategy() = default;
@@ -86,7 +86,7 @@ Vec3 RotationalStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
 
 //-------------- Reflective Strategy --------------//
 ReflectiveStrategy::ReflectiveStrategy() 
-    : m_detector(std::make_shared<MitraReflectiveSymmetryDetector>()) {
+    : m_detector(std::make_shared<SimplePCLReflectiveSymmetryDetector>()) {
 }
 
 ReflectiveStrategy::~ReflectiveStrategy() = default;
@@ -94,8 +94,8 @@ ReflectiveStrategy::~ReflectiveStrategy() = default;
 void ReflectiveStrategy::applyConfig(const ExplosionAxisConfig& config) {
     if (m_detector) {
         m_detector->setSampleCount(config.mirrorSampleCount);
-        m_detector->useCustomNormal(config.useCustomMirrorNormal);
-        m_detector->setCustomNormal(config.mirrorNormal);
+        m_detector->useCustomAxis(config.useCustomMirrorNormal);
+        m_detector->setCustomAxis(config.mirrorNormal);
         
         std::cout << "Applied config to reflective strategy: "
                   << "samples=" << config.mirrorSampleCount
@@ -241,8 +241,24 @@ PCLOptimizedStrategy::PCLOptimizedStrategy() {
 }
 
 void PCLOptimizedStrategy::applyConfig(const ExplosionAxisConfig& config) {
-    // Apply rotational symmetry detector configuration
-    std::cout << "Applied config to combined strategy" << std::endl;
+    // 配置旋转检测器
+    if (m_rotationDetector) {
+        m_rotationDetector->setSampleCount(config.rotationSampleCount);
+        m_rotationDetector->setSymmetryOrder(config.rotationSymmetryOrder);
+        m_rotationDetector->useCustomAxis(config.useCustomRotationAxis);
+        m_rotationDetector->setCustomAxis(config.rotationAxis);
+    }
+    // 配置反射检测器
+    if (m_reflectionDetector) {
+        m_reflectionDetector->setSampleCount(config.mirrorSampleCount);
+        m_reflectionDetector->useCustomAxis(config.useCustomMirrorNormal);
+        m_reflectionDetector->setCustomAxis(config.mirrorNormal);
+    }
+    // 配置 PCA 分析器
+    if (m_pcaAnalyzer) {
+        m_pcaAnalyzer->setUseLongestAxis(config.useLongestAxis);
+    }
+    std::cout << "Applied config to PCL Optimized Strategy" << std::endl;
 }
 
 PCLOptimizedStrategy::~PCLOptimizedStrategy() = default;
@@ -368,8 +384,8 @@ ExplosionAxisManager& ExplosionAxisManager::getInstance() {
 
 ExplosionAxisManager::ExplosionAxisManager() {
     // Default to using the Combined Strategy
-    m_currentStrategy = std::make_shared<CombinedStrategy>();
-    m_config.strategyName = "Combined Strategy";
+    m_currentStrategy = std::make_shared<PCAStrategy>();
+    m_config.strategyName = "PCA Strategy";
 }
 
 void ExplosionAxisManager::setStrategy(const std::string& strategyName) {

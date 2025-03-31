@@ -62,6 +62,8 @@ private:
     int m_symmetryOrder = 4;          // 对称阶数
     bool m_useCustomAxis = false;     // 是否使用自定义轴
     Vec3 m_customAxis = {0.0f, 0.0f, 1.0f};    // 自定义轴（默认z轴）
+    float m_signatureRatio = 0.1f;
+
 };
 
 } // namespace MC

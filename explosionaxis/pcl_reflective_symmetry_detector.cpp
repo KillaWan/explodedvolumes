@@ -110,8 +110,8 @@ bool SimplePCLReflectiveSymmetryDetector::checkSymmetryPlane(
     const Vec3& planePoint) {
     
     int matches = 0;
-    int totalTests = std::min(50, static_cast<int>(meshVertices.size()));
-    float tolerance = 0.1f; // Distance tolerance for match
+    int totalTests = std::min(m_sampleCount, static_cast<int>(meshVertices.size()));
+    float tolerance = 1.0f; // Distance tolerance for match
     
     // Sample vertices to test
     for (int i = 0; i < totalTests; i++) {

@@ -281,253 +281,278 @@ void main() {
     }
     
     void renderExplosionAxisGUI(std::string& currentStrategy)
+{
+    if (ImGui::Begin("Explosion Axis Settings"))
     {
-        if (ImGui::Begin("Explosion Axis Settings"))
-        {
-            // 获取当前配置
-            MC::ExplosionAxisConfig& config = MC::getExplosionAxisConfig();
-            
-            // 获取当前使用的内部策略名称
-            std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
-            
-            // 将内部策略名称转换为UI友好名称
-            if (currentStrategy.empty()) {
-                currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
-            }
-            
-            // 获取可用的UI友好策略名称
-            std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
-            
-            // 创建策略名称的字符数组，用于ImGui::Combo
-            std::vector<const char*> strategyNames;
-            for (const auto& strategy : strategies) {
-                strategyNames.push_back(strategy.c_str());
-            }
-            
-            // 找到当前策略在列表中的索引
-            int currentIndex = 0;
-            for (size_t i = 0; i < strategies.size(); ++i) {
-                if (strategies[i] == currentStrategy) {
-                    currentIndex = static_cast<int>(i);
-                    break;
-                }
-            }
-            
-            // 创建下拉选择框
-            if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
-            {
-                // 用户选择了新的策略
-                currentStrategy = strategies[currentIndex];
-                
-                // 更新配置中的策略名称（转换为内部名称）
-                std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
-                config.strategyName = newInternalStrategy;
-                
-                // 显式设置新的策略并应用配置
-                MC::setExplosionStrategy(newInternalStrategy);
-                MC::applyExplosionAxisConfig(config);
-                
-                // UI反馈
-                ImGui::Text("Switched to: %s", currentStrategy.c_str());
-                
-                // 设置重新计算标志
-                *reinterpret_cast<bool*>(ImGui::GetIO().UserData) = true;
-            }
-            
-            // 根据选择的策略显示不同的参数设置
-            ImGui::Separator();
-            
-            // 检查是否需要显示错误弹窗
-            static bool errorShown = false;
-            bool shouldShowError = false;
-            std::string errorMessage;
-            
-            // 通用检测失败
-            if (!config.lastDetectionSuccessful) {
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), 
-                    "No symmetry detected with current strategy!");
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                    "Using previous axis as fallback.");
-                ImGui::Separator();
-                
-                shouldShowError = true;
-                errorMessage = "No symmetry detected with the current strategy!\n\n"
-                            "Using previous axis as fallback.\n\n"
-                            "Try adjusting the parameters or selecting a different strategy.";
-            }
-            
-            if (currentStrategy == "Rotational Symmetry") {
-                ImGui::Text("Rotational Symmetry Parameters:");
-                
-                // 特定策略的状态提示
-                if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                        "No rotational symmetry detected in last analysis.");
-                    
-                    shouldShowError = true;
-                    errorMessage = "No rotational symmetry detected in last analysis.\n\n"
-                                "Try adjusting the sample count or symmetry order,\n"
-                                "or switch to a different strategy.";
-                }
-                
-                // 采样点数量
-                if (ImGui::SliderInt("Sample Count##rot", &config.rotationSampleCount, 10, 1000)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                
-                // 对称阶数
-                if (ImGui::SliderInt("Symmetry Order", &config.rotationSymmetryOrder, 2, 12)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                
-                // 自定义旋转轴选项
-                if (ImGui::Checkbox("Use Custom Rotation Axis", &config.useCustomRotationAxis)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                
-                if (config.useCustomRotationAxis) {
-                    bool axisChanged = false;
-                    axisChanged |= ImGui::DragFloat("Axis X##rot", &config.rotationAxis.x, 0.01f, -1.0f, 1.0f);
-                    axisChanged |= ImGui::DragFloat("Axis Y##rot", &config.rotationAxis.y, 0.01f, -1.0f, 1.0f);
-                    axisChanged |= ImGui::DragFloat("Axis Z##rot", &config.rotationAxis.z, 0.01f, -1.0f, 1.0f);
-                    
-                    if (axisChanged) {
-                        MC::applyExplosionAxisConfig(config);
-                    }
-                    
-                    // 归一化轴向量
-                    float length = std::sqrt(
-                        config.rotationAxis.x * config.rotationAxis.x +
-                        config.rotationAxis.y * config.rotationAxis.y +
-                        config.rotationAxis.z * config.rotationAxis.z
-                    );
-                    
-                    if (length > 0.0001f) {
-                        ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)", 
-                                    config.rotationAxis.x / length,
-                                    config.rotationAxis.y / length,
-                                    config.rotationAxis.z / length);
-                    }
-                }
-            }
-            else if (currentStrategy == "Reflective Symmetry") {
-                ImGui::Text("Reflective Symmetry Parameters:");
-                
-                // 特定策略的状态提示
-                if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                        "No reflective symmetry detected in last analysis.");
-                    
-                    shouldShowError = true;
-                    errorMessage = "No reflective symmetry detected in last analysis.\n\n"
-                                "Try adjusting the sample count or providing a custom mirror normal,\n"
-                                "or switch to a different strategy.";
-                }
-                
-                // 采样点数量
-                if (ImGui::SliderInt("Sample Count##mirror", &config.mirrorSampleCount, 10, 1000)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                
-                // 自定义镜像轴选项
-                if (ImGui::Checkbox("Use Custom Mirror Normal", &config.useCustomMirrorNormal)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                
-                if (config.useCustomMirrorNormal) {
-                    bool normalChanged = false;
-                    normalChanged |= ImGui::DragFloat("Normal X##mirror", &config.mirrorNormal.x, 0.01f, -1.0f, 1.0f);
-                    normalChanged |= ImGui::DragFloat("Normal Y##mirror", &config.mirrorNormal.y, 0.01f, -1.0f, 1.0f);
-                    normalChanged |= ImGui::DragFloat("Normal Z##mirror", &config.mirrorNormal.z, 0.01f, -1.0f, 1.0f);
-                    
-                    if (normalChanged) {
-                        MC::applyExplosionAxisConfig(config);
-                    }
-                    
-                    // 归一化法向量
-                    float length = std::sqrt(
-                        config.mirrorNormal.x * config.mirrorNormal.x +
-                        config.mirrorNormal.y * config.mirrorNormal.y +
-                        config.mirrorNormal.z * config.mirrorNormal.z
-                    );
-                    
-                    if (length > 0.0001f) {
-                        ImGui::Text("Normalized Normal: (%.2f, %.2f, %.2f)", 
-                                    config.mirrorNormal.x / length,
-                                    config.mirrorNormal.y / length,
-                                    config.mirrorNormal.z / length);
-                    }
-                }
-            }
-            else if (currentStrategy == "PCA (Longest Axis)") {
-                ImGui::Text("PCA Parameters:");
-                if (ImGui::Checkbox("Use Longest Principal Axis", &config.useLongestAxis)) {
-                    MC::applyExplosionAxisConfig(config);
-                }
-                if (!config.useLongestAxis) {
-                    ImGui::Text("Will use shortest principal axis instead");
-                }
-            }
-            else if (currentStrategy == "Combined") {
-                ImGui::Text("Combined Strategy Parameters:");
-                ImGui::TextWrapped("Priority order: Rotational Symmetry -> Reflective Symmetry -> PCA");
-                
-                // 策略检测状态提示
-                if (!config.rotationalDetectionSuccessful) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                        "No rotational symmetry detected.");
-                }
-                
-                if (!config.reflectiveDetectionSuccessful) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                        "No reflective symmetry detected.");
-                }
-                
-                // 显示各个子策略的一些基本设置
-                if (ImGui::CollapsingHeader("Rotational Symmetry Settings")) {
-                    bool changed = false;
-                    changed |= ImGui::SliderInt("Sample Count##combined_rot", &config.rotationSampleCount, 10, 1000);
-                    changed |= ImGui::SliderInt("Symmetry Order##combined", &config.rotationSymmetryOrder, 2, 12);
-                    
-                    if (changed) {
-                        MC::applyExplosionAxisConfig(config);
-                    }
-                }
-                
-                if (ImGui::CollapsingHeader("Reflective Symmetry Settings")) {
-                    if (ImGui::SliderInt("Sample Count##combined_mirror", &config.mirrorSampleCount, 10, 1000)) {
-                        MC::applyExplosionAxisConfig(config);
-                    }
-                }
-                
-                if (ImGui::CollapsingHeader("PCA Settings")) {
-                    if (ImGui::Checkbox("Use Longest Principal Axis##combined_pca", &config.useLongestAxis)) {
-                        MC::applyExplosionAxisConfig(config);
-                    }
-                }
-            }
-            
-            // 如果应该显示错误弹窗且之前未显示过
-            if (shouldShowError && !errorShown) {
-                MC::showError("Symmetry Detection Failed", errorMessage);
-                errorShown = true;
-            } else if (!shouldShowError) {
-                // 重置错误显示标志
-                errorShown = false;
-            }
-            
-            ImGui::Separator();
-            // 添加重新计算按钮
-            if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
-            {
-                // 设置一个标志，指示需要重新计算爆炸轴
-                *reinterpret_cast<bool*>(ImGui::GetIO().UserData) = true;
-                // 重置错误显示标志，以便在重新计算后能显示新的错误
-                errorShown = false;
+        // 获取当前配置
+        MC::ExplosionAxisConfig& config = MC::getExplosionAxisConfig();
+        
+        // 获取当前使用的内部策略名称
+        std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
+        
+        // 将内部策略名称转换为UI友好名称
+        if (currentStrategy.empty()) {
+            currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
+        }
+        
+        // 获取可用的UI友好策略名称
+        std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
+        
+        // 创建策略名称的字符数组，用于ImGui::Combo
+        std::vector<const char*> strategyNames;
+        for (const auto& strategy : strategies) {
+            strategyNames.push_back(strategy.c_str());
+        }
+        
+        // 找到当前策略在列表中的索引
+        int currentIndex = 0;
+        for (size_t i = 0; i < strategies.size(); ++i) {
+            if (strategies[i] == currentStrategy) {
+                currentIndex = static_cast<int>(i);
+                break;
             }
         }
-        ImGui::End();
+        
+        // 存储选择前的策略
+        static std::string previousStrategy = currentStrategy;
+        
+        // 创建下拉选择框
+        if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
+        {
+            // 用户选择了新的策略，仅更新UI显示，不立即应用
+            currentStrategy = strategies[currentIndex];
+            
+            // 只在UI上显示已选择新策略，但不实际应用
+            if (previousStrategy != currentStrategy) {
+                ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
+            }
+        }
+        
+        // 根据选择的策略显示不同的参数设置
+        ImGui::Separator();
+        
+        // 检查是否需要显示错误弹窗
+        static bool errorShown = false;
+        bool shouldShowError = false;
+        std::string errorMessage;
+        
+        // 通用检测失败
+        if (!config.lastDetectionSuccessful) {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), 
+                "No symmetry detected with current strategy!");
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                "Using previous axis as fallback.");
+            ImGui::Separator();
+            
+            shouldShowError = true;
+            errorMessage = "No symmetry detected with the current strategy!\n\n"
+                          "Using previous axis as fallback.\n\n"
+                          "Try adjusting the parameters or selecting a different strategy.";
+        }
+        
+        if (currentStrategy == "Rotational Symmetry") {
+            ImGui::Text("Rotational Symmetry Parameters:");
+            
+            // 特定策略的状态提示
+            if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No rotational symmetry detected in last analysis.");
+                
+                shouldShowError = true;
+                errorMessage = "No rotational symmetry detected in last analysis.\n\n"
+                              "Try adjusting the sample count or symmetry order,\n"
+                              "or switch to a different strategy.";
+            }
+            
+            // 采样点数量
+            if (ImGui::SliderInt("Sample Count##rot", &config.rotationSampleCount, 10, 5000)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 对称阶数
+            if (ImGui::SliderInt("Symmetry Order", &config.rotationSymmetryOrder, 2, 12)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 自定义旋转轴选项
+            if (ImGui::Checkbox("Use Custom Rotation Axis", &config.useCustomRotationAxis)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            if (config.useCustomRotationAxis) {
+                bool axisChanged = false;
+                axisChanged |= ImGui::DragFloat("Axis X##rot", &config.rotationAxis.x, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Y##rot", &config.rotationAxis.y, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Z##rot", &config.rotationAxis.z, 0.01f, -1.0f, 1.0f);
+                
+                if (axisChanged) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+                
+                // 归一化轴向量
+                float length = std::sqrt(
+                    config.rotationAxis.x * config.rotationAxis.x +
+                    config.rotationAxis.y * config.rotationAxis.y +
+                    config.rotationAxis.z * config.rotationAxis.z
+                );
+                
+                if (length > 0.0001f) {
+                    ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)", 
+                                config.rotationAxis.x / length,
+                                config.rotationAxis.y / length,
+                                config.rotationAxis.z / length);
+                }
+            }
+        }
+        else if (currentStrategy == "Reflective Symmetry") {
+            ImGui::Text("Reflective Symmetry Parameters:");
+            
+            // 特定策略的状态提示
+            if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No reflective symmetry detected in last analysis.");
+                
+                shouldShowError = true;
+                errorMessage = "No reflective symmetry detected in last analysis.\n\n"
+                              "Try adjusting the sample count or providing a custom mirror normal,\n"
+                              "or switch to a different strategy.";
+            }
+            
+            // 采样点数量
+            if (ImGui::SliderInt("Sample Count##mirror", &config.mirrorSampleCount, 10, 5000)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 自定义镜像轴选项
+            if (ImGui::Checkbox("Use Custom Mirror Normal", &config.useCustomMirrorNormal)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            if (config.useCustomMirrorNormal) {
+                bool normalChanged = false;
+                normalChanged |= ImGui::DragFloat("Normal X##mirror", &config.mirrorNormal.x, 0.01f, -1.0f, 1.0f);
+                normalChanged |= ImGui::DragFloat("Normal Y##mirror", &config.mirrorNormal.y, 0.01f, -1.0f, 1.0f);
+                normalChanged |= ImGui::DragFloat("Normal Z##mirror", &config.mirrorNormal.z, 0.01f, -1.0f, 1.0f);
+                
+                if (normalChanged) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+                
+                // 归一化法向量
+                float length = std::sqrt(
+                    config.mirrorNormal.x * config.mirrorNormal.x +
+                    config.mirrorNormal.y * config.mirrorNormal.y +
+                    config.mirrorNormal.z * config.mirrorNormal.z
+                );
+                
+                if (length > 0.0001f) {
+                    ImGui::Text("Normalized Normal: (%.2f, %.2f, %.2f)", 
+                                config.mirrorNormal.x / length,
+                                config.mirrorNormal.y / length,
+                                config.mirrorNormal.z / length);
+                }
+            }
+        }
+        else if (currentStrategy == "PCA (Longest Axis)") {
+            ImGui::Text("PCA Parameters:");
+            if (ImGui::Checkbox("Use Longest Principal Axis", &config.useLongestAxis)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            if (!config.useLongestAxis) {
+                ImGui::Text("Will use shortest principal axis instead");
+            }
+        }
+        else if (currentStrategy == "Combined") {
+            ImGui::Text("Combined Strategy Parameters:");
+            ImGui::TextWrapped("Priority order: Rotational Symmetry -> Reflective Symmetry -> PCA");
+            
+            // 策略检测状态提示
+            if (!config.rotationalDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No rotational symmetry detected.");
+            }
+            
+            if (!config.reflectiveDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No reflective symmetry detected.");
+            }
+            
+            // 显示各个子策略的一些基本设置
+            if (ImGui::CollapsingHeader("Rotational Symmetry Settings")) {
+                bool changed = false;
+                changed |= ImGui::SliderInt("Sample Count##combined_rot", &config.rotationSampleCount, 10, 5000);
+                changed |= ImGui::SliderInt("Symmetry Order##combined", &config.rotationSymmetryOrder, 2, 12);
+                
+                if (changed) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+            
+            if (ImGui::CollapsingHeader("Reflective Symmetry Settings")) {
+                if (ImGui::SliderInt("Sample Count##combined_mirror", &config.mirrorSampleCount, 10, 5000)) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+            
+            if (ImGui::CollapsingHeader("PCA Settings")) {
+                if (ImGui::Checkbox("Use Longest Principal Axis##combined_pca", &config.useLongestAxis)) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+        }
+        
+        // 如果应该显示错误弹窗且之前未显示过
+        if (shouldShowError && !errorShown) {
+            MC::showError("Symmetry Detection Failed", errorMessage);
+            errorShown = true;
+        } else if (!shouldShowError) {
+            // 重置错误显示标志
+            errorShown = false;
+        }
+        
+        ImGui::Separator();
+        
+        // 显示说明信息
+        if (previousStrategy != currentStrategy) {
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                "Strategy change will be applied when you click 'Recalculate'");
+        }
+        
+        // 添加重新计算按钮
+        if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
+        {
+            // 如果策略已更改，立即应用新策略
+            if (previousStrategy != currentStrategy) {
+                std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
+                config.strategyName = newInternalStrategy;
+                MC::setExplosionStrategy(newInternalStrategy);
+                MC::applyExplosionAxisConfig(config);
+                previousStrategy = currentStrategy;  // 更新先前策略记录
+            }
+            
+            // 设置重新计算标志
+            *reinterpret_cast<bool*>(ImGui::GetIO().UserData) = true;
+            // 重置错误显示标志，以便在重新计算后能显示新的错误
+            errorShown = false;
+        }
     }
+    ImGui::End();
+    
+    // 调用渲染弹出窗口的函数
+    MC::renderErrorPopup();
+}
+
     // 设置弹出错误窗口的函数
     void showError(const std::string& title, const std::string& message)
     {

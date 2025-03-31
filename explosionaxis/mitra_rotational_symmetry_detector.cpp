@@ -129,9 +129,28 @@ std::map<Vec3, int> MitraRotationalSymmetryDetector::pairPointsAndVote(
     for (const auto& vertex : samples) {
         signatures.push_back(computeSignature(vertex, meshVertices));
     }
+
+    // 第一步：统计所有采样点对之间的签名距离
+    std::vector<float> allDistances;
+    for (size_t i = 0; i < signatures.size(); ++i) {
+        for (size_t j = i + 1; j < signatures.size(); ++j) {
+            float dist = (signatures[i] - signatures[j]).norm();
+            allDistances.push_back(dist);
+        }
+    }
     
-    // 为每对具有相似签名的点投票
-    const float signatureThreshold = 0.1f; // 签名相似性阈值
+    // 如果没有足够的距离数据，则采用一个默认值
+    float medianDistance = 0.0f;
+    if (!allDistances.empty()) {
+        std::sort(allDistances.begin(), allDistances.end());
+        medianDistance = allDistances[allDistances.size() / 2];
+    }
+    
+    // 根据经验比例计算动态阈值
+    float signatureThreshold = m_signatureRatio * medianDistance;
+    
+    std::cout << "Computed median signature distance: " << medianDistance 
+              << ", dynamic threshold: " << signatureThreshold << std::endl;
     
     for (size_t i = 0; i < samples.size(); ++i) {
         for (size_t j = i + 1; j < samples.size(); ++j) {

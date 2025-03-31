@@ -169,11 +169,6 @@ int main()
             generateMesh(volumeData, isoLevel, mesh);
             updateMesh(mesh, VAO, VBO, EBO);
 
-            // Recompute the symmetry axis when mesh changes
-            explosionAxis = computeExplosionAxis(mesh.vertices);
-            std::cout << "Updated explosion axis: ("
-                      << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
-
             // Update the axis line vertices
             float halfLength = mesh.max_dimension * 2.0f;
             axisStart.x = mesh.center.x - explosionAxis.x * halfLength;

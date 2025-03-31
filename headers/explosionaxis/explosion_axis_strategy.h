@@ -23,7 +23,7 @@ class EigenReflectiveSymmetryDetector;
 // 爆炸轴设置结构
 struct ExplosionAxisConfig {
     // 策略选择
-    std::string strategyName = "Combined Strategy";
+    std::string strategyName = "PCA Strategy";
 
     // 旋转对称性参数
     int rotationSampleCount = 100;
@@ -49,7 +49,7 @@ struct ExplosionAxisConfig {
         if (uiName == "Rotational Symmetry") return "Rotational Strategy";
         if (uiName == "Reflective Symmetry") return "Reflective Strategy";
         if (uiName == "PCA (Longest Axis)") return "PCA Strategy";
-        if (uiName == "Combined") return "Combined Strategy";
+        if (uiName == "Combined") return "PCL Optimized Strategy";
         return uiName; // 如果已经是内部名称，则直接返回
     }
     
@@ -58,7 +58,7 @@ struct ExplosionAxisConfig {
         if (internalName == "Rotational Strategy") return "Rotational Symmetry";
         if (internalName == "Reflective Strategy") return "Reflective Symmetry";
         if (internalName == "PCA Strategy") return "PCA (Longest Axis)";
-        if (internalName == "Combined Strategy") return "Combined";
+        if (internalName == "PCL Optimized Strategy") return "Combined";
         return internalName; // 如果未找到匹配，则直接返回
     }
 
@@ -103,7 +103,7 @@ public:
     void applyConfig(const ExplosionAxisConfig& config) override;
     
 private:
-    std::shared_ptr<MitraRotationalSymmetryDetector> m_detector;
+    std::shared_ptr<SimplePCLRotationalSymmetryDetector> m_detector;
 };
 
 // 反射对称性策略
@@ -119,7 +119,7 @@ public:
     void applyConfig(const ExplosionAxisConfig& config) override;
     
 private:
-    std::shared_ptr<MitraReflectiveSymmetryDetector> m_detector;
+    std::shared_ptr<SimplePCLReflectiveSymmetryDetector> m_detector;
 };
 
 // PCA策略
