@@ -22,6 +22,13 @@ namespace MC
     unsigned int createShaderProgram();
     unsigned int createLineShaderProgram(); // Added for symmetry axis
 
+    // ImGui样式设置
+    void setupImGuiStyle();
+
+    // 视口计算和更新
+    void calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight);
+    void updateViewport(GLFWwindow *window);
+
     // explosion strategy GUI
     void renderExplosionAxisGUI(std::string &currentStrategy);
 
@@ -63,5 +70,8 @@ namespace MC
 
     // 初始化GLFW和GLAD
     GLFWwindow *initOpenGL();
+
+    // 主渲染循环
+    void runRenderingLoop(GLFWwindow *window, const VolumeData &volumeData, Mesh &mesh);
 
 } // namespace MC

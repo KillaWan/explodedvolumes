@@ -76,7 +76,7 @@ int main()
 
     // initialize mesh and Marching Cubes
     Mesh mesh;
-    float isoLevel = 30.0f;
+    float isoLevel = 50.0f;
     float tempIsoLevel = isoLevel;
     generateMesh(volumeData, isoLevel, mesh);
 

@@ -14,7 +14,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-//explosion strategy
+// explosion strategy
 #include "explosionaxis/explosion_axis_strategy.h"
 
 #include "post_processor.h"
@@ -91,12 +91,91 @@ void main() {
 }
 )glsl";
 
+    // 设置ImGui的样式为白色主题
+    void setupImGuiStyle()
+    {
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // 设置UI颜色为白色背景和黑色文字
+        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
+        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
+        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
+        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
+        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
+        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
+        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);        // 深灰色复选标记
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);       // 灰色滑块抓取
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 活动时较深的滑块
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);   // 悬停时浅灰色框架
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 活动时稍深
+        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色标头
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
+        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);        // 灰色分隔符
+        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);          // 白色弹出背景
+
+        // 调整填充和间距以获得更整洁的外观
+        style.WindowPadding = ImVec2(12.0f, 12.0f);
+        style.FramePadding = ImVec2(6.0f, 4.0f);
+        style.ItemSpacing = ImVec2(8.0f, 6.0f);
+        style.ItemInnerSpacing = ImVec2(6.0f, 6.0f);
+        style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
+
+        // 圆角以获得更现代的外观
+        style.WindowRounding = 4.0f;
+        style.FrameRounding = 3.0f;
+        style.PopupRounding = 4.0f;
+        style.ScrollbarRounding = 4.0f;
+        style.GrabRounding = 3.0f;
+        style.TabRounding = 4.0f;
+
+        // 窗口标题对齐
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
+    }
+
+    // 计算视口大小以适应面板
+    void calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight)
+    {
+        // 获取窗口大小
+        int windowWidth, windowHeight;
+        glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+
+        // 面板宽度（固定）
+        float panelWidth = 300.0f;
+        float padding = 10.0f;
+
+        // 计算视口大小（窗口大小减去面板区域）
+        viewportX = 0;
+        viewportY = 0;
+        viewportWidth = windowWidth - panelWidth - padding * 2;
+        viewportHeight = windowHeight;
+
+        // 确保我们有有效的视口尺寸
+        if (viewportWidth < 1)
+            viewportWidth = 1;
+        if (viewportHeight < 1)
+            viewportHeight = 1;
+    }
+
+    // 将计算的视口应用于OpenGL
+    void updateViewport(GLFWwindow *window)
+    {
+        int viewportX, viewportY, viewportWidth, viewportHeight;
+        calculateViewport(window, viewportX, viewportY, viewportWidth, viewportHeight);
+
+        // 设置OpenGL视口
+        glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+    }
+
     //---------------------- 回调函数实现 ----------------------
 
     // Window size change callback
     void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     {
-        glViewport(0, 0, width, height);
+        updateViewport(window);
     }
 
     // Mouse callback function
@@ -281,288 +360,352 @@ void main() {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(IndexType),
                      mesh.indices.data(), GL_STATIC_DRAW);
     }
-    
-    void renderExplosionAxisGUI(std::string& currentStrategy)
-{
-    if (ImGui::Begin("Explosion Axis Settings"))
+
+    void renderExplosionAxisGUI(std::string &currentStrategy)
     {
-        // 获取当前配置
-        MC::ExplosionAxisConfig& config = MC::getExplosionAxisConfig();
-        
-        // 获取当前使用的内部策略名称
-        std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
-        
-        // 将内部策略名称转换为UI友好名称
-        if (currentStrategy.empty()) {
-            currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
-        }
-        
-        // 获取可用的UI友好策略名称
-        std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
-        
-        // 创建策略名称的字符数组，用于ImGui::Combo
-        std::vector<const char*> strategyNames;
-        for (const auto& strategy : strategies) {
-            strategyNames.push_back(strategy.c_str());
-        }
-        
-        // 找到当前策略在列表中的索引
-        int currentIndex = 0;
-        for (size_t i = 0; i < strategies.size(); ++i) {
-            if (strategies[i] == currentStrategy) {
-                currentIndex = static_cast<int>(i);
-                break;
-            }
-        }
-        
-        // 存储选择前的策略
-        static std::string previousStrategy = currentStrategy;
-        
-        // 创建下拉选择框
-        if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
+        // 不修改函数的逻辑，只修改UI样式
+
+        // 应用白色主题
+        ImGuiStyle &style = ImGui::GetStyle();
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
+        style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
+        style.Colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
+        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
+
+        // 用于垂直排列面板的参数
+        ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 viewportSize = viewport->Size;
+        float panelWidth = 300.0f;
+        float spacing = 10.0f;
+        float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f; // 在第一个面板下方
+
+        // 设置窗口位置和大小
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, 0));
+
+        if (ImGui::Begin("Explosion Axis Settings"))
         {
-            // 用户选择了新的策略，仅更新UI显示，不立即应用
-            currentStrategy = strategies[currentIndex];
-            
-            // 只在UI上显示已选择新策略，但不实际应用
-            if (previousStrategy != currentStrategy) {
-                ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
+            // 获取当前配置
+            MC::ExplosionAxisConfig &config = MC::getExplosionAxisConfig();
+
+            // 获取当前使用的内部策略名称
+            std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
+
+            // 将内部策略名称转换为UI友好名称
+            if (currentStrategy.empty())
+            {
+                currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
             }
-        }
-        
-        // 根据选择的策略显示不同的参数设置
-        ImGui::Separator();
-        
-        // 检查是否需要显示错误弹窗
-        static bool errorShown = false;
-        bool shouldShowError = false;
-        std::string errorMessage;
-        
-        // 通用检测失败
-        if (!config.lastDetectionSuccessful) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), 
-                "No symmetry detected with current strategy!");
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                "Using previous axis as fallback.");
+
+            // 获取可用的UI友好策略名称
+            std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
+
+            // 创建策略名称的字符数组，用于ImGui::Combo
+            std::vector<const char *> strategyNames;
+            for (const auto &strategy : strategies)
+            {
+                strategyNames.push_back(strategy.c_str());
+            }
+
+            // 找到当前策略在列表中的索引
+            int currentIndex = 0;
+            for (size_t i = 0; i < strategies.size(); ++i)
+            {
+                if (strategies[i] == currentStrategy)
+                {
+                    currentIndex = static_cast<int>(i);
+                    break;
+                }
+            }
+
+            // 存储选择前的策略
+            static std::string previousStrategy = currentStrategy;
+
+            // 创建下拉选择框
+            if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
+            {
+                // 用户选择了新的策略，仅更新UI显示，不立即应用
+                currentStrategy = strategies[currentIndex];
+
+                // 只在UI上显示已选择新策略，但不实际应用
+                if (previousStrategy != currentStrategy)
+                {
+                    ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
+                }
+            }
+
+            // 根据选择的策略显示不同的参数设置
             ImGui::Separator();
-            
-            shouldShowError = true;
-            errorMessage = "No symmetry detected with the current strategy!\n\n"
-                          "Using previous axis as fallback.\n\n"
-                          "Try adjusting the parameters or selecting a different strategy.";
-        }
-        
-        if (currentStrategy == "Rotational Symmetry") {
-            ImGui::Text("Rotational Symmetry Parameters:");
-            
-            // 特定策略的状态提示
-            if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful) {
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                    "No rotational symmetry detected in last analysis.");
-                
+
+            // 检查是否需要显示错误弹窗
+            static bool errorShown = false;
+            bool shouldShowError = false;
+            std::string errorMessage;
+
+            // 通用检测失败
+            if (!config.lastDetectionSuccessful)
+            {
+                ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f),
+                                   "No symmetry detected with current strategy!");
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                   "Using previous axis as fallback.");
+                ImGui::Separator();
+
                 shouldShowError = true;
-                errorMessage = "No rotational symmetry detected in last analysis.\n\n"
-                              "Try adjusting the sample count or symmetry order,\n"
-                              "or switch to a different strategy.";
+                errorMessage = "No symmetry detected with the current strategy!\n\n"
+                               "Using previous axis as fallback.\n\n"
+                               "Try adjusting the parameters or selecting a different strategy.";
             }
-            
-            // 采样点数量
-            if (ImGui::SliderInt("Sample Count##rot", &config.rotationSampleCount, 10, 5000)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            
-            // 对称阶数
-            if (ImGui::SliderInt("Symmetry Order", &config.rotationSymmetryOrder, 2, 12)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            
-            // 自定义旋转轴选项
-            if (ImGui::Checkbox("Use Custom Rotation Axis", &config.useCustomRotationAxis)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            
-            if (config.useCustomRotationAxis) {
-                bool axisChanged = false;
-                axisChanged |= ImGui::DragFloat("Axis X##rot", &config.rotationAxis.x, 0.01f, -1.0f, 1.0f);
-                axisChanged |= ImGui::DragFloat("Axis Y##rot", &config.rotationAxis.y, 0.01f, -1.0f, 1.0f);
-                axisChanged |= ImGui::DragFloat("Axis Z##rot", &config.rotationAxis.z, 0.01f, -1.0f, 1.0f);
-                
-                if (axisChanged) {
+
+            // 以下代码与原始函数相同，保持逻辑不变
+            if (currentStrategy == "Rotational Symmetry")
+            {
+                ImGui::Text("Rotational Symmetry Parameters:");
+
+                // 特定策略的状态提示
+                if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful)
+                {
+                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                       "No rotational symmetry detected in last analysis.");
+
+                    shouldShowError = true;
+                    errorMessage = "No rotational symmetry detected in last analysis.\n\n"
+                                   "Try adjusting the sample count or symmetry order,\n"
+                                   "or switch to a different strategy.";
+                }
+
+                // 采样点数量
+                if (ImGui::SliderInt("Sample Count##rot", &config.rotationSampleCount, 10, 5000))
+                {
                     // 修改后仅更新配置但不重新计算
                     MC::applyExplosionAxisConfig(config);
                 }
-                
-                // 归一化轴向量
-                float length = std::sqrt(
-                    config.rotationAxis.x * config.rotationAxis.x +
-                    config.rotationAxis.y * config.rotationAxis.y +
-                    config.rotationAxis.z * config.rotationAxis.z
-                );
-                
-                if (length > 0.0001f) {
-                    ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)", 
-                                config.rotationAxis.x / length,
-                                config.rotationAxis.y / length,
-                                config.rotationAxis.z / length);
-                }
-            }
-        }
-        else if (currentStrategy == "Reflective Symmetry") {
-            ImGui::Text("Reflective Symmetry Parameters:");
-            
-            // 特定策略的状态提示
-            if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful) {
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                    "No reflective symmetry detected in last analysis.");
-                
-                shouldShowError = true;
-                errorMessage = "No reflective symmetry detected in last analysis.\n\n"
-                              "Try adjusting the sample count or providing a custom mirror normal,\n"
-                              "or switch to a different strategy.";
-            }
-            
-            // 采样点数量
-            if (ImGui::SliderInt("Sample Count##mirror", &config.mirrorSampleCount, 10, 5000)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            
-            // 自定义镜像轴选项
-            if (ImGui::Checkbox("Use Custom Mirror Normal", &config.useCustomMirrorNormal)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            
-            if (config.useCustomMirrorNormal) {
-                bool normalChanged = false;
-                normalChanged |= ImGui::DragFloat("Normal X##mirror", &config.mirrorNormal.x, 0.01f, -1.0f, 1.0f);
-                normalChanged |= ImGui::DragFloat("Normal Y##mirror", &config.mirrorNormal.y, 0.01f, -1.0f, 1.0f);
-                normalChanged |= ImGui::DragFloat("Normal Z##mirror", &config.mirrorNormal.z, 0.01f, -1.0f, 1.0f);
-                
-                if (normalChanged) {
+
+                // 对称阶数
+                if (ImGui::SliderInt("Symmetry Order", &config.rotationSymmetryOrder, 2, 12))
+                {
                     // 修改后仅更新配置但不重新计算
                     MC::applyExplosionAxisConfig(config);
                 }
-                
-                // 归一化法向量
-                float length = std::sqrt(
-                    config.mirrorNormal.x * config.mirrorNormal.x +
-                    config.mirrorNormal.y * config.mirrorNormal.y +
-                    config.mirrorNormal.z * config.mirrorNormal.z
-                );
-                
-                if (length > 0.0001f) {
-                    ImGui::Text("Normalized Normal: (%.2f, %.2f, %.2f)", 
-                                config.mirrorNormal.x / length,
-                                config.mirrorNormal.y / length,
-                                config.mirrorNormal.z / length);
-                }
-            }
-        }
-        else if (currentStrategy == "PCA (Longest Axis)") {
-            ImGui::Text("PCA Parameters:");
-            if (ImGui::Checkbox("Use Longest Principal Axis", &config.useLongestAxis)) {
-                // 修改后仅更新配置但不重新计算
-                MC::applyExplosionAxisConfig(config);
-            }
-            if (!config.useLongestAxis) {
-                ImGui::Text("Will use shortest principal axis instead");
-            }
-        }
-        else if (currentStrategy == "Combined") {
-            ImGui::Text("Combined Strategy Parameters:");
-            ImGui::TextWrapped("Priority order: Rotational Symmetry -> Reflective Symmetry -> PCA");
-            
-            // 策略检测状态提示
-            if (!config.rotationalDetectionSuccessful) {
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                    "No rotational symmetry detected.");
-            }
-            
-            if (!config.reflectiveDetectionSuccessful) {
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                    "No reflective symmetry detected.");
-            }
-            
-            // 显示各个子策略的一些基本设置
-            if (ImGui::CollapsingHeader("Rotational Symmetry Settings")) {
-                bool changed = false;
-                changed |= ImGui::SliderInt("Sample Count##combined_rot", &config.rotationSampleCount, 10, 5000);
-                changed |= ImGui::SliderInt("Symmetry Order##combined", &config.rotationSymmetryOrder, 2, 12);
-                
-                if (changed) {
+
+                // 自定义旋转轴选项
+                if (ImGui::Checkbox("Use Custom Rotation Axis", &config.useCustomRotationAxis))
+                {
                     // 修改后仅更新配置但不重新计算
                     MC::applyExplosionAxisConfig(config);
                 }
+
+                if (config.useCustomRotationAxis)
+                {
+                    bool axisChanged = false;
+                    axisChanged |= ImGui::DragFloat("Axis X##rot", &config.rotationAxis.x, 0.01f, -1.0f, 1.0f);
+                    axisChanged |= ImGui::DragFloat("Axis Y##rot", &config.rotationAxis.y, 0.01f, -1.0f, 1.0f);
+                    axisChanged |= ImGui::DragFloat("Axis Z##rot", &config.rotationAxis.z, 0.01f, -1.0f, 1.0f);
+
+                    if (axisChanged)
+                    {
+                        // 修改后仅更新配置但不重新计算
+                        MC::applyExplosionAxisConfig(config);
+                    }
+
+                    // 归一化轴向量
+                    float length = std::sqrt(
+                        config.rotationAxis.x * config.rotationAxis.x +
+                        config.rotationAxis.y * config.rotationAxis.y +
+                        config.rotationAxis.z * config.rotationAxis.z);
+
+                    if (length > 0.0001f)
+                    {
+                        ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)",
+                                    config.rotationAxis.x / length,
+                                    config.rotationAxis.y / length,
+                                    config.rotationAxis.z / length);
+                    }
+                }
             }
-            
-            if (ImGui::CollapsingHeader("Reflective Symmetry Settings")) {
-                if (ImGui::SliderInt("Sample Count##combined_mirror", &config.mirrorSampleCount, 10, 5000)) {
+            else if (currentStrategy == "Reflective Symmetry")
+            {
+                // 原代码保持不变...
+                ImGui::Text("Reflective Symmetry Parameters:");
+
+                // 特定策略的状态提示
+                if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful)
+                {
+                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                       "No reflective symmetry detected in last analysis.");
+
+                    shouldShowError = true;
+                    errorMessage = "No reflective symmetry detected in last analysis.\n\n"
+                                   "Try adjusting the sample count or providing a custom mirror normal,\n"
+                                   "or switch to a different strategy.";
+                }
+
+                // 采样点数量
+                if (ImGui::SliderInt("Sample Count##mirror", &config.mirrorSampleCount, 10, 5000))
+                {
                     // 修改后仅更新配置但不重新计算
                     MC::applyExplosionAxisConfig(config);
                 }
-            }
-            
-            if (ImGui::CollapsingHeader("PCA Settings")) {
-                if (ImGui::Checkbox("Use Longest Principal Axis##combined_pca", &config.useLongestAxis)) {
+
+                // 自定义镜像轴选项
+                if (ImGui::Checkbox("Use Custom Mirror Normal", &config.useCustomMirrorNormal))
+                {
                     // 修改后仅更新配置但不重新计算
                     MC::applyExplosionAxisConfig(config);
                 }
+
+                if (config.useCustomMirrorNormal)
+                {
+                    bool normalChanged = false;
+                    normalChanged |= ImGui::DragFloat("Normal X##mirror", &config.mirrorNormal.x, 0.01f, -1.0f, 1.0f);
+                    normalChanged |= ImGui::DragFloat("Normal Y##mirror", &config.mirrorNormal.y, 0.01f, -1.0f, 1.0f);
+                    normalChanged |= ImGui::DragFloat("Normal Z##mirror", &config.mirrorNormal.z, 0.01f, -1.0f, 1.0f);
+
+                    if (normalChanged)
+                    {
+                        // 修改后仅更新配置但不重新计算
+                        MC::applyExplosionAxisConfig(config);
+                    }
+
+                    // 归一化法向量
+                    float length = std::sqrt(
+                        config.mirrorNormal.x * config.mirrorNormal.x +
+                        config.mirrorNormal.y * config.mirrorNormal.y +
+                        config.mirrorNormal.z * config.mirrorNormal.z);
+
+                    if (length > 0.0001f)
+                    {
+                        ImGui::Text("Normalized Normal: (%.2f, %.2f, %.2f)",
+                                    config.mirrorNormal.x / length,
+                                    config.mirrorNormal.y / length,
+                                    config.mirrorNormal.z / length);
+                    }
+                }
+            }
+            else if (currentStrategy == "PCA (Longest Axis)")
+            {
+                // 原代码保持不变...
+                ImGui::Text("PCA Parameters:");
+                if (ImGui::Checkbox("Use Longest Principal Axis", &config.useLongestAxis))
+                {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+                if (!config.useLongestAxis)
+                {
+                    ImGui::Text("Will use shortest principal axis instead");
+                }
+            }
+            else if (currentStrategy == "Combined")
+            {
+                // 原代码保持不变...
+                ImGui::Text("Combined Strategy Parameters:");
+                ImGui::TextWrapped("Priority order: Rotational Symmetry -> Reflective Symmetry -> PCA");
+
+                // 策略检测状态提示
+                if (!config.rotationalDetectionSuccessful)
+                {
+                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                       "No rotational symmetry detected.");
+                }
+
+                if (!config.reflectiveDetectionSuccessful)
+                {
+                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                       "No reflective symmetry detected.");
+                }
+
+                // 显示各个子策略的一些基本设置
+                if (ImGui::CollapsingHeader("Rotational Symmetry Settings"))
+                {
+                    bool changed = false;
+                    changed |= ImGui::SliderInt("Sample Count##combined_rot", &config.rotationSampleCount, 10, 5000);
+                    changed |= ImGui::SliderInt("Symmetry Order##combined", &config.rotationSymmetryOrder, 2, 12);
+
+                    if (changed)
+                    {
+                        // 修改后仅更新配置但不重新计算
+                        MC::applyExplosionAxisConfig(config);
+                    }
+                }
+
+                if (ImGui::CollapsingHeader("Reflective Symmetry Settings"))
+                {
+                    if (ImGui::SliderInt("Sample Count##combined_mirror", &config.mirrorSampleCount, 10, 5000))
+                    {
+                        // 修改后仅更新配置但不重新计算
+                        MC::applyExplosionAxisConfig(config);
+                    }
+                }
+
+                if (ImGui::CollapsingHeader("PCA Settings"))
+                {
+                    if (ImGui::Checkbox("Use Longest Principal Axis##combined_pca", &config.useLongestAxis))
+                    {
+                        // 修改后仅更新配置但不重新计算
+                        MC::applyExplosionAxisConfig(config);
+                    }
+                }
+            }
+
+            // 如果应该显示错误弹窗且之前未显示过
+            if (shouldShowError && !errorShown)
+            {
+                MC::showError("Symmetry Detection Failed", errorMessage);
+                errorShown = true;
+            }
+            else if (!shouldShowError)
+            {
+                // 重置错误显示标志
+                errorShown = false;
+            }
+
+            ImGui::Separator();
+
+            // 显示说明信息
+            if (previousStrategy != currentStrategy)
+            {
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                   "Strategy change will be applied when you click 'Recalculate'");
+            }
+
+            // 添加重新计算按钮
+            if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
+            {
+                // 如果策略已更改，立即应用新策略
+                if (previousStrategy != currentStrategy)
+                {
+                    std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
+                    config.strategyName = newInternalStrategy;
+                    MC::setExplosionStrategy(newInternalStrategy);
+                    MC::applyExplosionAxisConfig(config);
+                    previousStrategy = currentStrategy; // 更新先前策略记录
+                }
+
+                // 设置重新计算标志
+                *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
+                // 重置错误显示标志，以便在重新计算后能显示新的错误
+                errorShown = false;
             }
         }
-        
-        // 如果应该显示错误弹窗且之前未显示过
-        if (shouldShowError && !errorShown) {
-            MC::showError("Symmetry Detection Failed", errorMessage);
-            errorShown = true;
-        } else if (!shouldShowError) {
-            // 重置错误显示标志
-            errorShown = false;
-        }
-        
-        ImGui::Separator();
-        
-        // 显示说明信息
-        if (previousStrategy != currentStrategy) {
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-                "Strategy change will be applied when you click 'Recalculate'");
-        }
-        
-        // 添加重新计算按钮
-        if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
-        {
-            // 如果策略已更改，立即应用新策略
-            if (previousStrategy != currentStrategy) {
-                std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
-                config.strategyName = newInternalStrategy;
-                MC::setExplosionStrategy(newInternalStrategy);
-                MC::applyExplosionAxisConfig(config);
-                previousStrategy = currentStrategy;  // 更新先前策略记录
-            }
-            
-            // 设置重新计算标志
-            *reinterpret_cast<bool*>(ImGui::GetIO().UserData) = true;
-            // 重置错误显示标志，以便在重新计算后能显示新的错误
-            errorShown = false;
-        }
+        ImGui::End();
+
+        // 调用渲染弹出窗口的函数
+        MC::renderErrorPopup();
     }
-    ImGui::End();
-    
-    // 调用渲染弹出窗口的函数
-    MC::renderErrorPopup();
-}
 
     // 设置弹出错误窗口的函数
-    void showError(const std::string& title, const std::string& message)
+    void showError(const std::string &title, const std::string &message)
     {
         errorPopupTitle = title;
         errorPopupMessage = message;
         showErrorPopup = true;
     }
-    
+
     // 渲染错误弹出窗口的函数
     void renderErrorPopup()
     {
@@ -572,27 +715,37 @@ void main() {
             ImVec2 center = ImGui::GetMainViewport()->GetCenter();
             ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
-            
+
             // 创建模态弹出窗口
-            if (ImGui::BeginPopupModal(errorPopupTitle.c_str(), &showErrorPopup, 
-                                      ImGuiWindowFlags_AlwaysAutoResize))
+            if (ImGui::BeginPopupModal(errorPopupTitle.c_str(), &showErrorPopup,
+                                       ImGuiWindowFlags_AlwaysAutoResize))
             {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // 黑色文字
                 ImGui::TextWrapped("%s", errorPopupMessage.c_str());
+                ImGui::PopStyleColor();
                 ImGui::Separator();
-                
+
                 // 创建居中的确认按钮
                 ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 120) * 0.5f);
-                if (ImGui::Button("OK", ImVec2(120, 0)) || 
-                    ImGui::IsKeyPressed(ImGuiKey_Escape) || 
+
+                // 设置按钮样式
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+
+                if (ImGui::Button("OK", ImVec2(120, 0)) ||
+                    ImGui::IsKeyPressed(ImGuiKey_Escape) ||
                     ImGui::IsKeyPressed(ImGuiKey_Enter))
                 {
                     showErrorPopup = false;
                     ImGui::CloseCurrentPopup();
                 }
-                
+
+                ImGui::PopStyleColor(3); // 弹出按钮样式
+
                 ImGui::EndPopup();
             }
-            
+
             // 如果showErrorPopup为true，打开弹出窗口
             if (showErrorPopup)
             {
@@ -601,37 +754,50 @@ void main() {
         }
     }
 
-    // 渲染一帧
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
                      std::string &currentExplosionStrategy, PostProcess &postProcessor,
-                    unsigned int axisVAO,
-                     unsigned int intersectionVAO, int numIntersectionSegments){
-        
+                     unsigned int axisVAO,
+                     unsigned int intersectionVAO, int numIntersectionSegments)
+    {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        
+
         // 绑定后处理FBO，渲染到纹理
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
-        // clean screen
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        // 清屏
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 白色背景
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // sart ImGui frame
+        // 开始ImGui帧
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // ImGui panel
-        ImGui::Begin("Marching Cubes Control");
-        // TODO: change the range from 0 to 100
+        // 应用白色主题
+        setupImGuiStyle();
+
+        // 计算面板位置和大小以垂直排列
+        // 获取主视口大小用于窗口尺寸
+        ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 viewportSize = viewport->Size;
+
+        float panelWidth = 300.0f;                 // 所有面板的固定宽度
+        float panelHeight = viewportSize.y / 4.0f; // 每个面板占屏幕高度的1/4
+        float spacing = 10.0f;
+
+        // 面板1：主控制
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+        ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
 
-        // Slider from min_val to max_val
+        // 从min_val到max_val的滑块
         if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
         {
-            // (No immediate recalc here if you want to wait for a button)
+            // (如果您想等待按钮，这里不需要立即重新计算)
         }
 
         // 应用ISO值的按钮
@@ -650,30 +816,38 @@ void main() {
             std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
         }
 
-        ImGui::End(); // end ImGui panel
+        ImGui::End(); // 结束主控制面板
 
+        // 面板2：爆炸轴设置
+        // 设置位置和大小，但保持原始逻辑
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 2 + panelHeight));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 1.5f));
         renderExplosionAxisGUI(currentExplosionStrategy);
-        
-        // 渲染弹出错误窗口
-        renderErrorPopup();
+
+        // 面板3：预留给未来使用（如果需要）
+        // ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2));
+        // ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+        // ImGui::Begin("Additional Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        // // 如果需要，在这里添加其他控件
+        // ImGui::End();
 
         // 渲染ImGui界面
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        // viewport size
+        // 获取视口大小
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (float)width / (float)height;
 
-        // use shader
+        // 使用着色器
         glUseProgram(shaderProgram);
 
-        // build transform
+        // 构建变换
         glm::mat4 model(1.0f);
         float scale_factor = 20.0f / mesh.max_dimension;
         model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
 
-        // center model
+        // 居中模型
         glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
         model = glm::translate(model, -glmCenter);
 
@@ -684,7 +858,7 @@ void main() {
 
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
 
-        // pass uniform
+        // 传递uniform
         int modelLoc = glGetUniformLocation(shaderProgram, "model");
         int viewLoc = glGetUniformLocation(shaderProgram, "view");
         int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -693,7 +867,7 @@ void main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // draw
+        // 绘制
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -754,11 +928,10 @@ void main() {
         // 应用后处理效果
         postProcessor.render(width, height);
 
-        // render ImGui
+        // 渲染ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
-
     // 爆炸视图渲染函数
     void MC::renderExplodedView(
         GLFWwindow *window,
@@ -774,8 +947,22 @@ void main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // ImGui面板
-        ImGui::Begin("Marching Cubes Control");
+        // 应用白色主题
+        setupImGuiStyle();
+
+        // 计算面板位置和大小以垂直排列
+        ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 viewportSize = viewport->Size;
+
+        float panelWidth = 300.0f;
+        float panelHeight = viewportSize.y / 4.0f;
+        float spacing = 10.0f;
+
+        // 面板1：主控制
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+        ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
         if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
         {
@@ -805,7 +992,7 @@ void main() {
         ImGui::End();
 
         // 清屏
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 白色背景
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 视口大小
@@ -869,7 +1056,6 @@ void main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
-
     // 设置ImGui
     void setupImGui(GLFWwindow *window)
     {
@@ -877,7 +1063,52 @@ void main() {
         ImGui::CreateContext();
         ImGuiIO &io = ImGui::GetIO();
         (void)io;
-        ImGui::StyleColorsDark();
+
+        // 使用亮色主题而不是暗色主题
+        ImGui::StyleColorsLight();
+
+        // 应用我们的自定义白色主题
+        ImGuiStyle &style = ImGui::GetStyle();
+        ImVec4 *colors = style.Colors;
+
+        // 设置UI颜色为白色背景和黑色文字
+        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
+        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
+        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
+        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
+        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
+        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
+        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);        // 深灰色复选标记
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);       // 灰色滑块抓取
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 活动时较深的滑块
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);   // 悬停时浅灰色框架
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 活动时稍深
+        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色标头
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
+        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);        // 灰色分隔符
+        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);          // 白色弹出背景
+
+        // 调整填充和间距以获得更整洁的外观
+        style.WindowPadding = ImVec2(12.0f, 12.0f);
+        style.FramePadding = ImVec2(6.0f, 4.0f);
+        style.ItemSpacing = ImVec2(8.0f, 6.0f);
+        style.ItemInnerSpacing = ImVec2(6.0f, 6.0f);
+        style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
+
+        // 圆角以获得更现代的外观
+        style.WindowRounding = 4.0f;
+        style.FrameRounding = 3.0f;
+        style.PopupRounding = 4.0f;
+        style.ScrollbarRounding = 4.0f;
+        style.GrabRounding = 3.0f;
+        style.TabRounding = 4.0f;
+
+        // 窗口标题对齐
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
+
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330");
     }
@@ -890,13 +1121,13 @@ void main() {
         ImGui::DestroyContext();
     }
 
-    // initialize OpenGL
+    // 初始化OpenGL
     GLFWwindow *initOpenGL()
     {
-        // initialize GLFW
+        // 初始化GLFW
         if (!glfwInit())
         {
-            std::cerr << "GLFW init failed\n";
+            std::cerr << "GLFW初始化失败\n";
             return nullptr;
         }
 
@@ -907,13 +1138,26 @@ void main() {
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-        GLFWwindow *window = glfwCreateWindow(800, 600, "Marching Cubes Visualization", nullptr, nullptr);
+        // 获取主显示器的分辨率
+        const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
+        // 根据屏幕分辨率计算窗口大小（屏幕大小的80%）
+        int windowWidth = static_cast<int>(mode->width * 0.8f);
+        int windowHeight = static_cast<int>(mode->height * 0.8f);
+
+        // 创建具有计算大小的窗口
+        GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Marching Cubes Visualization", nullptr, nullptr);
         if (!window)
         {
-            std::cerr << "Failed to create GLFW window\n";
+            std::cerr << "创建GLFW窗口失败\n";
             glfwTerminate();
             return nullptr;
         }
+
+        // 在屏幕上居中窗口
+        int screenWidth = mode->width;
+        int screenHeight = mode->height;
+        glfwSetWindowPos(window, (screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2);
 
         glfwMakeContextCurrent(window);
         glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -921,10 +1165,10 @@ void main() {
         glfwSetScrollCallback(window, scroll_callback);
         glfwSetKeyCallback(window, key_callback);
 
-        // initialize GLAD
+        // 初始化GLAD
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
-            std::cerr << "Failed to init GLAD\n";
+            std::cerr << "初始化GLAD失败\n";
             return nullptr;
         }
 
@@ -936,4 +1180,108 @@ void main() {
         return window;
     }
 
+    // 修改runRenderingLoop函数中的postProcessor初始化部分
+void runRenderingLoop(GLFWwindow* window, const VolumeData& volumeData, Mesh& mesh)
+{
+    // 设置初始状态
+    float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f;  // 从中间值开始
+    float tempIsoLevel = isoLevel;
+    
+    // 相机初始化
+    camera.distance = 100.0f;
+    camera.zoom = 1.0f;
+    camera.rotationX = 0.0f;
+    camera.rotationY = 0.0f;
+    
+    // 设置着色器
+    unsigned int shaderProgram = createShaderProgram();
+    
+    // 设置网格
+    unsigned int VAO, VBO, EBO;
+    setupMesh(mesh, VAO, VBO, EBO);
+    
+    // 设置轴可视化
+    unsigned int axisVAO = 0;
+    // 初始化axisVAO和相关缓冲区
+    
+    // 设置交线可视化
+    unsigned int intersectionVAO = 0;
+    int numIntersectionSegments = 0;
+    // 初始化intersectionVAO和相关缓冲区
+    
+    // 获取窗口大小来初始化后处理器
+    int windowWidth, windowHeight;
+    glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+    
+    // 设置后处理，传入窗口宽度和高度
+    PostProcess postProcessor;
+    postProcessor.init(windowWidth, windowHeight);
+    
+    // 当前爆炸策略 
+    std::string currentExplosionStrategy = "";
+    
+    // 重新计算标志（用于ImGui）
+    bool recalculateNeeded = false;
+    ImGuiIO& io = ImGui::GetIO();
+    io.UserData = &recalculateNeeded;
+    
+    // 主渲染循环
+    while (!glfwWindowShouldClose(window))
+    {
+        // 轮询事件
+        glfwPollEvents();
+        
+        // 检查窗口大小是否改变，如果改变则重新初始化后处理器
+        int currentWidth, currentHeight;
+        glfwGetFramebufferSize(window, &currentWidth, &currentHeight);
+        if (currentWidth != windowWidth || currentHeight != windowHeight) {
+            windowWidth = currentWidth;
+            windowHeight = currentHeight;
+            postProcessor.cleanup();
+            postProcessor.init(windowWidth, windowHeight);
+        }
+        
+        // 检查是否需要基于UI交互进行重新计算
+        if (recalculateNeeded)
+        {
+            // 在这里执行重新计算
+            // ...
+            
+            // 重置标志
+            recalculateNeeded = false;
+        }
+        
+        // 更新视口 
+        updateViewport(window);
+        
+        // 渲染帧
+        renderFrame(window, shaderProgram, VAO, mesh, camera, isoLevel, tempIsoLevel,
+                   volumeData, currentExplosionStrategy, postProcessor, 
+                   axisVAO, intersectionVAO, numIntersectionSegments);
+        
+        // 交换缓冲区
+        glfwSwapBuffers(window);
+    }
+    
+    // 清理
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteProgram(shaderProgram);
+    
+    if (axisVAO != 0)
+        glDeleteVertexArrays(1, &axisVAO);
+    
+    if (intersectionVAO != 0)
+        glDeleteVertexArrays(1, &intersectionVAO);
+    
+    // 清理后处理器
+    postProcessor.cleanup();
+    
+    // 清理ImGui
+    cleanupImGui();
+    
+    // 终止GLFW
+    glfwTerminate();
+}
 } // namespace MC
