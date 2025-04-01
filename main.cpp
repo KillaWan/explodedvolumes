@@ -14,6 +14,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "post_processor.h"
 
 // GLAD & GLFW
 #include <glad/glad.h>
@@ -23,6 +24,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 
 int main()
 {
@@ -42,6 +44,17 @@ int main()
     bool recalculateExplosionAxis = false;
     ImGui::GetIO().UserData = &recalculateExplosionAxis;
 
+    PostProcess postProcessor;
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    if (!postProcessor.init(width, height)) {
+        std::cerr << "Failed to initialize post processor\n";
+        glfwTerminate();
+        return -1;
+    }
+
+// 记录初始窗口大小，用于检测调整大小
+int lastWidth = width, lastHeight = height;
     // open NIfTI file
     std::string filePath = openNiftiFileDialog();
     if (filePath.empty())
@@ -120,8 +133,14 @@ int main()
     // main loop
     while (!glfwWindowShouldClose(window))
     {
+        glfwGetFramebufferSize(window, &width, &height);
+        if (width != lastWidth || height != lastHeight) {
+            postProcessor.resize(width, height);
+            lastWidth = width;
+            lastHeight = height;
+        }
         // 渲染当前帧
-        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData, currentExplosionStrategy,
+        renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel, tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor,
                     intersectionVAO, planeIntersection.segments.size());
 
         // Draw the symmetry axis line
@@ -251,6 +270,8 @@ int main()
     glDeleteBuffers(1, &intersectionVBO);
     glDeleteProgram(shaderProgram);
     glDeleteProgram(lineShaderProgram);
+
+    postProcessor.cleanup();
 
     // 清理ImGui
     cleanupImGui();

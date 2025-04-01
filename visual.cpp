@@ -17,6 +17,8 @@
 //explosion strategy
 #include "explosionaxis/explosion_axis_strategy.h"
 
+#include "post_processor.h"
+
 namespace MC
 {
 
@@ -60,8 +62,8 @@ void main()
     // Basic lighting
     vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * vec3(0.8, 0.5, 0.2);
-    vec3 ambient = vec3(0.2, 0.1, 0.05);
+    vec3 diffuse = diff * vec3(0.8, 0.8, 0.8);
+    vec3 ambient = vec3(0.2, 0.2, 0.2);
     
     FragColor = vec4(ambient + diffuse, 1.0);
 }
@@ -85,7 +87,7 @@ void main() {
 out vec4 FragColor;
 
 void main() {
-    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the axis
+    FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color for the axis
 }
 )glsl";
 
@@ -603,9 +605,16 @@ void main() {
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
-                     std::string &currentExplosionStrategy, unsigned int intersectionVAO, int numIntersectionSegments){
+                     std::string &currentExplosionStrategy, PostProcess &postProcessor,
+                     unsigned int intersectionVAO, int numIntersectionSegments){
+        
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        
+        // 绑定后处理FBO，渲染到纹理
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
         // clean screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // sart ImGui frame
@@ -658,7 +667,6 @@ void main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // viewport size
-        int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (float)width / (float)height;
 
@@ -725,6 +733,12 @@ void main() {
             // 删除着色器程序
             glDeleteProgram(simpleColorShader);
         }
+
+        // 切换回默认帧缓冲
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // 应用后处理效果
+        postProcessor.render(width, height);
 
         // render ImGui
         ImGui::Render();

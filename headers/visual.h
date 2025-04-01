@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data.h"
+#include "post_processor.h"
 
 // 前向声明
 struct GLFWwindow;
@@ -30,7 +31,7 @@ namespace MC
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
-                     std::string &currentExplosionStrategy, unsigned int intersectionVAO = 0, int numIntersectionSegments = 0);
+                     std::string &currentExplosionStrategy, PostProcess &postProcessor, unsigned int intersectionVAO = 0, int numIntersectionSegments = 0);
 
     // UI相关函数
     void setupImGui(GLFWwindow *window);
