@@ -425,6 +425,84 @@ void main() {
             // 存储选择前的策略
             static std::string previousStrategy = currentStrategy;
 
+            // 添加自定义爆炸轴控制（在策略选择之前显示）
+            ImGui::Text("Custom Explosion Axis");
+            
+            if (ImGui::Checkbox("Use Custom Axis", &config.useCustomExplosionAxis))
+            {
+                // 切换状态时的行为
+                if (!config.useCustomExplosionAxis)
+                {
+                    // 如果取消自定义轴，恢复策略计算的轴
+                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true; // 触发重新计算
+                }
+                
+                // 应用配置更新
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            if (config.useCustomExplosionAxis)
+            {
+                // 自定义X,Y,Z轴控制
+                bool axisChanged = false;
+                axisChanged |= ImGui::DragFloat("Axis X", &config.customExplosionAxis.x, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Y", &config.customExplosionAxis.y, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Z", &config.customExplosionAxis.z, 0.01f, -1.0f, 1.0f);
+                
+                if (axisChanged) {
+                    // 如果轴值改变，应用配置更新
+                    MC::applyExplosionAxisConfig(config);
+                }
+                
+                // 计算轴向量长度
+                float length = std::sqrt(
+                    config.customExplosionAxis.x * config.customExplosionAxis.x +
+                    config.customExplosionAxis.y * config.customExplosionAxis.y +
+                    config.customExplosionAxis.z * config.customExplosionAxis.z);
+                
+                // 显示归一化的轴向量
+                if (length > 0.0001f)
+                {
+                    ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)",
+                                config.customExplosionAxis.x / length,
+                                config.customExplosionAxis.y / length,
+                                config.customExplosionAxis.z / length);
+                }
+                
+                // 应用自定义轴的按钮
+                if (ImGui::Button("Apply Custom Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
+                {
+                    if (length > 0.0001f)
+                    {
+                        // 进行归一化
+                        Vec3 normalizedAxis = {
+                            config.customExplosionAxis.x / length,
+                            config.customExplosionAxis.y / length,
+                            config.customExplosionAxis.z / length
+                        };
+                        
+                        // 更新配置中的自定义轴为归一化后的值
+                        config.customExplosionAxis = normalizedAxis;
+                        
+                        // 应用配置
+                        MC::applyExplosionAxisConfig(config);
+                        
+                        // 重绘模型 - 设置重新计算标志
+                        *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
+                        
+                        // 显示成功应用的提示
+                        ImGui::TextColored(ImVec4(0.0f, 0.6f, 0.0f, 1.0f), "Custom axis applied!");
+                    }
+                    else
+                    {
+                        MC::showError("Invalid Axis", "Cannot use a zero-length axis vector.\nPlease specify a valid direction.");
+                    }
+                }
+            }
+            
+            ImGui::Separator();
+            ImGui::Text("Strategy Selection");
+            
             // 创建下拉选择框
             if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
             {
@@ -450,18 +528,18 @@ void main() {
             if (!config.lastDetectionSuccessful)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f),
-                                   "No symmetry detected with current strategy!");
+                                "No symmetry detected with current strategy!");
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                   "Using previous axis as fallback.");
+                                "Using previous axis as fallback.");
                 ImGui::Separator();
 
                 shouldShowError = true;
                 errorMessage = "No symmetry detected with the current strategy!\n\n"
-                               "Using previous axis as fallback.\n\n"
-                               "Try adjusting the parameters or selecting a different strategy.";
+                            "Using previous axis as fallback.\n\n"
+                            "Try adjusting the parameters or selecting a different strategy.";
             }
 
-            // 以下代码与原始函数相同，保持逻辑不变
+            // 以下代码与原始函数相同，根据策略显示不同参数
             if (currentStrategy == "Rotational Symmetry")
             {
                 ImGui::Text("Rotational Symmetry Parameters:");
@@ -470,12 +548,12 @@ void main() {
                 if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                       "No rotational symmetry detected in last analysis.");
+                                    "No rotational symmetry detected in last analysis.");
 
                     shouldShowError = true;
                     errorMessage = "No rotational symmetry detected in last analysis.\n\n"
-                                   "Try adjusting the sample count or symmetry order,\n"
-                                   "or switch to a different strategy.";
+                                "Try adjusting the sample count or symmetry order,\n"
+                                "or switch to a different strategy.";
                 }
 
                 // 采样点数量
@@ -536,12 +614,12 @@ void main() {
                 if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                       "No reflective symmetry detected in last analysis.");
+                                    "No reflective symmetry detected in last analysis.");
 
                     shouldShowError = true;
                     errorMessage = "No reflective symmetry detected in last analysis.\n\n"
-                                   "Try adjusting the sample count or providing a custom mirror normal,\n"
-                                   "or switch to a different strategy.";
+                                "Try adjusting the sample count or providing a custom mirror normal,\n"
+                                "or switch to a different strategy.";
                 }
 
                 // 采样点数量
@@ -610,13 +688,13 @@ void main() {
                 if (!config.rotationalDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                       "No rotational symmetry detected.");
+                                    "No rotational symmetry detected.");
                 }
 
                 if (!config.reflectiveDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                       "No reflective symmetry detected.");
+                                    "No reflective symmetry detected.");
                 }
 
                 // 显示各个子策略的一些基本设置
@@ -667,14 +745,14 @@ void main() {
             ImGui::Separator();
 
             // 显示说明信息
-            if (previousStrategy != currentStrategy)
+            if (previousStrategy != currentStrategy && !config.useCustomExplosionAxis)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                   "Strategy change will be applied when you click 'Recalculate'");
+                                "Strategy change will be applied when you click 'Recalculate'");
             }
 
-            // 添加重新计算按钮
-            if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
+            // 添加重新计算按钮（仅在未选择自定义轴时显示）
+            if (!config.useCustomExplosionAxis && ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
             {
                 // 如果策略已更改，立即应用新策略
                 if (previousStrategy != currentStrategy)
@@ -697,7 +775,6 @@ void main() {
         // 调用渲染弹出窗口的函数
         MC::renderErrorPopup();
     }
-
     // 设置弹出错误窗口的函数
     void showError(const std::string &title, const std::string &message)
     {

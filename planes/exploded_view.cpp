@@ -237,27 +237,59 @@ namespace MC
     }
 
     // 更新爆炸视图位移
-    void updateExplodedViewDisplacements(
+    void MC::updateExplodedViewDisplacements(
         ExplodedView &explodedView,
         const Vec3 &explosionAxis,
         float explosionDistance)
     {
-        // 更新每个片段的位移
-        int centerIndex = explodedView.segments.size() / 2;
-
-        for (size_t i = 0; i < explodedView.segments.size(); ++i)
-        {
+        // 保存爆炸距离设置
+        explodedView.explosionDistance = explosionDistance;
+        int segmentCount = explodedView.segments.size();
+        
+        if (segmentCount <= 1) {
+            return; // 没有片段或只有一个片段，不需要爆炸
+        }
+        
+        // 确保爆炸轴是单位向量
+        Vec3 normalizedAxis = explosionAxis;
+        float length = std::sqrt(
+            normalizedAxis.x * normalizedAxis.x +
+            normalizedAxis.y * normalizedAxis.y +
+            normalizedAxis.z * normalizedAxis.z);
+            
+        if (length > 0.0001f) {
+            normalizedAxis.x /= length;
+            normalizedAxis.y /= length;
+            normalizedAxis.z /= length;
+        }
+        
+        // 这里使用与原始computeExplodedView中完全相同的计算逻辑
+        float segmentSpacing = explosionDistance;
+        
+        for (int i = 0; i < segmentCount; i++) {
             auto &segment = explodedView.segments[i];
-
-            // 计算位移，使中间片段保持不动
-            float displacementFactor = (i - centerIndex) * explosionDistance;
-
-            segment.displacement.x = explosionAxis.x * displacementFactor;
-            segment.displacement.y = explosionAxis.y * displacementFactor;
-            segment.displacement.z = explosionAxis.z * displacementFactor;
-
-            // 重新设置网格以反映新位置
-            setupSegmentMesh(segment);
+            
+            // 复制原始computeExplodedView中相同的位移计算逻辑:
+            // 1. 计算标准化索引 (-0.5到0.5的范围)
+            float normalizedIndex = (segmentCount > 1) ? 2.0f * ((float)i / (segmentCount - 1) - 0.5f) : 0.0f;
+            
+            // 2. 计算相对于中心的索引距离
+            int centerIndex = segmentCount / 2;
+            int indexDistance = std::abs(i - centerIndex);
+            
+            // 3. 基于间距计算额外偏移
+            float gapDisplacement = indexDistance * segmentSpacing;
+            
+            // 4. 总位移 = 标准化分布位移 + 间隔位移（保持符号一致）
+            float displacementFactor = -1.0f * normalizedIndex * explosionDistance;
+            if (displacementFactor != 0) {
+                displacementFactor += (displacementFactor > 0 ? gapDisplacement : -gapDisplacement);
+            }
+            
+            // 应用位移
+            segment.displacement.x = normalizedAxis.x * displacementFactor;
+            segment.displacement.y = normalizedAxis.y * displacementFactor;
+            segment.displacement.z = normalizedAxis.z * displacementFactor;
         }
     }
 

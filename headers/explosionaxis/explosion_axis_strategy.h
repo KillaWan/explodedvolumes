@@ -25,6 +25,10 @@ struct ExplosionAxisConfig {
     // 策略选择
     std::string strategyName = "PCA Strategy";
 
+    //custom axis
+    bool useCustomExplosionAxis = false;
+    Vec3 customExplosionAxis = {0.0f, 1.0f, 0.0f};
+
     // 旋转对称性参数
     int rotationSampleCount = 100;
     int rotationSymmetryOrder = 4;
