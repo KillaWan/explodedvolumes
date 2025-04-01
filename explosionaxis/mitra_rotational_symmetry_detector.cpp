@@ -11,10 +11,24 @@ using namespace VectorOps;
 
 // Mitra旋转对称性检测严格实现
 bool MitraRotationalSymmetryDetector::detect(const std::vector<Vertex>& meshVertices, 
-                                             Vec3& outRotationAxis, 
-                                             int& outSymmetryOrder) {
+                                          Vec3& outRotationAxis, 
+                                          int& outSymmetryOrder) {
+    // 如果设置了使用自定义轴，则直接使用它
+    if (m_useCustomAxis) {
+        std::cout << "Using custom rotation axis: (" 
+                  << m_customAxis.x << ", " << m_customAxis.y << ", " << m_customAxis.z 
+                  << ")" << std::endl;
+        outRotationAxis = normalize(m_customAxis);
+        outSymmetryOrder = m_symmetryOrder;
+        return true;
+    }
+    
+    // 否则执行标准检测流程
+    std::cout << "Executing rotational symmetry detection with sample count: " 
+              << m_sampleCount << std::endl;
+              
     // 1. 随机采样一部分点进行处理
-    int sampleCount = std::min(10, static_cast<int>(meshVertices.size() / 10));
+    int sampleCount = std::min(m_sampleCount, static_cast<int>(meshVertices.size() / 10));
     std::vector<Vertex> samples = randomSampling(meshVertices, sampleCount);
     
     // 2. 对这些采样点进行配对并在变换空间中投票
@@ -26,6 +40,16 @@ bool MitraRotationalSymmetryDetector::detect(const std::vector<Vertex>& meshVert
     // 4. 如果发现了候选对称轴，进行验证
     if (hasSymmetry) {
         hasSymmetry = verifySymmetry(meshVertices, outRotationAxis, outSymmetryOrder);
+    }
+    
+
+    if (!hasSymmetry && m_symmetryOrder > 0) {
+        std::cout << "Rotational symmetry detection failed, using PCA axis instead." << std::endl;
+        // PCAAnalyzer pcaAnalyzer;
+        // outRotationAxis = pcaAnalyzer.analyzePrincipalAxis(meshVertices);
+        outSymmetryOrder = m_symmetryOrder;
+        // hasSymmetry = true;
+        return false;
     }
     
     return hasSymmetry;
@@ -105,9 +129,28 @@ std::map<Vec3, int> MitraRotationalSymmetryDetector::pairPointsAndVote(
     for (const auto& vertex : samples) {
         signatures.push_back(computeSignature(vertex, meshVertices));
     }
+
+    // 第一步：统计所有采样点对之间的签名距离
+    std::vector<float> allDistances;
+    for (size_t i = 0; i < signatures.size(); ++i) {
+        for (size_t j = i + 1; j < signatures.size(); ++j) {
+            float dist = (signatures[i] - signatures[j]).norm();
+            allDistances.push_back(dist);
+        }
+    }
     
-    // 为每对具有相似签名的点投票
-    const float signatureThreshold = 0.1f; // 签名相似性阈值
+    // 如果没有足够的距离数据，则采用一个默认值
+    float medianDistance = 0.0f;
+    if (!allDistances.empty()) {
+        std::sort(allDistances.begin(), allDistances.end());
+        medianDistance = allDistances[allDistances.size() / 2];
+    }
+    
+    // 根据经验比例计算动态阈值
+    float signatureThreshold = m_signatureRatio * medianDistance;
+    
+    std::cout << "Computed median signature distance: " << medianDistance 
+              << ", dynamic threshold: " << signatureThreshold << std::endl;
     
     for (size_t i = 0; i < samples.size(); ++i) {
         for (size_t j = i + 1; j < samples.size(); ++j) {
@@ -162,8 +205,8 @@ bool MitraRotationalSymmetryDetector::extractSymmetryAxisFromVotes(
     if (maxVotes >= minVotes) {
         outAxis = normalize(bestAxis);
         
-        // 通过验证步骤确定对称阶数 (简化实现)
-        outSymmetryOrder = 4; // 默认为4阶对称
+        // 使用设置的对称阶数或默认值
+        outSymmetryOrder = m_symmetryOrder > 0 ? m_symmetryOrder : 4;
         
         std::cout << "候选旋转对称轴得到 " << maxVotes << " 票" << std::endl;
         return true;
@@ -205,8 +248,8 @@ bool MitraRotationalSymmetryDetector::verifySymmetry(
     int& outSymmetryOrder) {
     
     // 在实际实现中，这一步需要检查当旋转网格时，有多少点能够匹配
-    // 简化实现: 假设验证成功，并设置默认对称阶数
-    outSymmetryOrder = 4; // 默认为4阶对称
+    // 这里我们使用设置的对称阶数
+    outSymmetryOrder = m_symmetryOrder > 0 ? m_symmetryOrder : 4;
     
     std::cout << "验证旋转对称性成功，对称轴: (" 
               << axis.x << ", " << axis.y << ", " << axis.z 

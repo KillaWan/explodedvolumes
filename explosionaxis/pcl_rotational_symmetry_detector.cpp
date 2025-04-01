@@ -115,7 +115,7 @@ bool SimplePCLRotationalSymmetryDetector::checkSymmetryAlong(
     int& symmetryOrder) {
     
     // For simplicity, we'll test common symmetry orders
-    std::vector<int> ordersToCheck = {4, 6, 8, 3, 5, 2};
+    std::vector<int> ordersToCheck = {m_symmetryOrder};
     
     Vec3 centroid = computeCentroid(meshVertices);
     
@@ -124,8 +124,8 @@ bool SimplePCLRotationalSymmetryDetector::checkSymmetryAlong(
         
         // Count how many vertices approximately match after rotation
         int matches = 0;
-        int totalTests = std::min(50, static_cast<int>(meshVertices.size()));
-        float tolerance = 0.1f; // Distance tolerance for match
+        int totalTests = std::min(m_sampleCount, static_cast<int>(meshVertices.size()));
+        float tolerance = 1.0f; // Distance tolerance for match
         
         // Create rotation matrix around axis
         Eigen::Matrix3f rotation;

@@ -12,6 +12,10 @@ class SimplePCLReflectiveSymmetryDetector : public ReflectiveSymmetryDetector {
 public:
     SimplePCLReflectiveSymmetryDetector();
     ~SimplePCLReflectiveSymmetryDetector() = default;
+
+    void setSampleCount(int count) { m_sampleCount = count; }
+    void useCustomAxis(bool use) { m_useCustomAxis = use; }
+    void setCustomAxis(const Vec3& axis) { m_customAxis = axis; }
     
     // Detect reflective symmetry using simple PCA-based methods
     bool detect(const std::vector<Vertex>& meshVertices, 
@@ -20,6 +24,9 @@ public:
     std::string getName() const override { return "Simple PCL Reflective Detector"; }
 
 private:
+    int m_sampleCount = 100;
+    bool m_useCustomAxis = false;
+    Vec3 m_customAxis = {0.0f, 0.0f, 1.0f};
     // Helper method to check if a plane is a symmetry plane
     bool checkSymmetryPlane(const std::vector<Vertex>& meshVertices,
                          const Vec3& planeNormal,

@@ -14,6 +14,11 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+//explosion strategy
+#include "explosionaxis/explosion_axis_strategy.h"
+
+#include "post_processor.h"
+
 namespace MC
 {
 
@@ -21,8 +26,10 @@ namespace MC
     Camera camera;
     bool firstMouse = true;
     float lastX, lastY;
-    bool showIntersections = false; // 默认不显示交线
-
+    bool showIntersections = false; // 控制爆炸视图的显示
+    bool showErrorPopup = false;
+    std::string errorPopupMessage = "";
+    std::string errorPopupTitle = "Error";
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -55,8 +62,8 @@ void main()
     // Basic lighting
     vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * vec3(0.8, 0.5, 0.2);
-    vec3 ambient = vec3(0.2, 0.1, 0.05);
+    vec3 diffuse = diff * vec3(0.8, 0.8, 0.8);
+    vec3 ambient = vec3(0.2, 0.2, 0.2);
     
     FragColor = vec4(ambient + diffuse, 1.0);
 }
@@ -80,7 +87,7 @@ void main() {
 out vec4 FragColor;
 
 void main() {
-    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the axis
+    FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color for the axis
 }
 )glsl";
 
@@ -274,15 +281,341 @@ void main() {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(IndexType),
                      mesh.indices.data(), GL_STATIC_DRAW);
     }
+    
+    void renderExplosionAxisGUI(std::string& currentStrategy)
+{
+    if (ImGui::Begin("Explosion Axis Settings"))
+    {
+        // 获取当前配置
+        MC::ExplosionAxisConfig& config = MC::getExplosionAxisConfig();
+        
+        // 获取当前使用的内部策略名称
+        std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
+        
+        // 将内部策略名称转换为UI友好名称
+        if (currentStrategy.empty()) {
+            currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
+        }
+        
+        // 获取可用的UI友好策略名称
+        std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
+        
+        // 创建策略名称的字符数组，用于ImGui::Combo
+        std::vector<const char*> strategyNames;
+        for (const auto& strategy : strategies) {
+            strategyNames.push_back(strategy.c_str());
+        }
+        
+        // 找到当前策略在列表中的索引
+        int currentIndex = 0;
+        for (size_t i = 0; i < strategies.size(); ++i) {
+            if (strategies[i] == currentStrategy) {
+                currentIndex = static_cast<int>(i);
+                break;
+            }
+        }
+        
+        // 存储选择前的策略
+        static std::string previousStrategy = currentStrategy;
+        
+        // 创建下拉选择框
+        if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
+        {
+            // 用户选择了新的策略，仅更新UI显示，不立即应用
+            currentStrategy = strategies[currentIndex];
+            
+            // 只在UI上显示已选择新策略，但不实际应用
+            if (previousStrategy != currentStrategy) {
+                ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
+            }
+        }
+        
+        // 根据选择的策略显示不同的参数设置
+        ImGui::Separator();
+        
+        // 检查是否需要显示错误弹窗
+        static bool errorShown = false;
+        bool shouldShowError = false;
+        std::string errorMessage;
+        
+        // 通用检测失败
+        if (!config.lastDetectionSuccessful) {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), 
+                "No symmetry detected with current strategy!");
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                "Using previous axis as fallback.");
+            ImGui::Separator();
+            
+            shouldShowError = true;
+            errorMessage = "No symmetry detected with the current strategy!\n\n"
+                          "Using previous axis as fallback.\n\n"
+                          "Try adjusting the parameters or selecting a different strategy.";
+        }
+        
+        if (currentStrategy == "Rotational Symmetry") {
+            ImGui::Text("Rotational Symmetry Parameters:");
+            
+            // 特定策略的状态提示
+            if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No rotational symmetry detected in last analysis.");
+                
+                shouldShowError = true;
+                errorMessage = "No rotational symmetry detected in last analysis.\n\n"
+                              "Try adjusting the sample count or symmetry order,\n"
+                              "or switch to a different strategy.";
+            }
+            
+            // 采样点数量
+            if (ImGui::SliderInt("Sample Count##rot", &config.rotationSampleCount, 10, 5000)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 对称阶数
+            if (ImGui::SliderInt("Symmetry Order", &config.rotationSymmetryOrder, 2, 12)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 自定义旋转轴选项
+            if (ImGui::Checkbox("Use Custom Rotation Axis", &config.useCustomRotationAxis)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            if (config.useCustomRotationAxis) {
+                bool axisChanged = false;
+                axisChanged |= ImGui::DragFloat("Axis X##rot", &config.rotationAxis.x, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Y##rot", &config.rotationAxis.y, 0.01f, -1.0f, 1.0f);
+                axisChanged |= ImGui::DragFloat("Axis Z##rot", &config.rotationAxis.z, 0.01f, -1.0f, 1.0f);
+                
+                if (axisChanged) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+                
+                // 归一化轴向量
+                float length = std::sqrt(
+                    config.rotationAxis.x * config.rotationAxis.x +
+                    config.rotationAxis.y * config.rotationAxis.y +
+                    config.rotationAxis.z * config.rotationAxis.z
+                );
+                
+                if (length > 0.0001f) {
+                    ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)", 
+                                config.rotationAxis.x / length,
+                                config.rotationAxis.y / length,
+                                config.rotationAxis.z / length);
+                }
+            }
+        }
+        else if (currentStrategy == "Reflective Symmetry") {
+            ImGui::Text("Reflective Symmetry Parameters:");
+            
+            // 特定策略的状态提示
+            if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No reflective symmetry detected in last analysis.");
+                
+                shouldShowError = true;
+                errorMessage = "No reflective symmetry detected in last analysis.\n\n"
+                              "Try adjusting the sample count or providing a custom mirror normal,\n"
+                              "or switch to a different strategy.";
+            }
+            
+            // 采样点数量
+            if (ImGui::SliderInt("Sample Count##mirror", &config.mirrorSampleCount, 10, 5000)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            // 自定义镜像轴选项
+            if (ImGui::Checkbox("Use Custom Mirror Normal", &config.useCustomMirrorNormal)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            
+            if (config.useCustomMirrorNormal) {
+                bool normalChanged = false;
+                normalChanged |= ImGui::DragFloat("Normal X##mirror", &config.mirrorNormal.x, 0.01f, -1.0f, 1.0f);
+                normalChanged |= ImGui::DragFloat("Normal Y##mirror", &config.mirrorNormal.y, 0.01f, -1.0f, 1.0f);
+                normalChanged |= ImGui::DragFloat("Normal Z##mirror", &config.mirrorNormal.z, 0.01f, -1.0f, 1.0f);
+                
+                if (normalChanged) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+                
+                // 归一化法向量
+                float length = std::sqrt(
+                    config.mirrorNormal.x * config.mirrorNormal.x +
+                    config.mirrorNormal.y * config.mirrorNormal.y +
+                    config.mirrorNormal.z * config.mirrorNormal.z
+                );
+                
+                if (length > 0.0001f) {
+                    ImGui::Text("Normalized Normal: (%.2f, %.2f, %.2f)", 
+                                config.mirrorNormal.x / length,
+                                config.mirrorNormal.y / length,
+                                config.mirrorNormal.z / length);
+                }
+            }
+        }
+        else if (currentStrategy == "PCA (Longest Axis)") {
+            ImGui::Text("PCA Parameters:");
+            if (ImGui::Checkbox("Use Longest Principal Axis", &config.useLongestAxis)) {
+                // 修改后仅更新配置但不重新计算
+                MC::applyExplosionAxisConfig(config);
+            }
+            if (!config.useLongestAxis) {
+                ImGui::Text("Will use shortest principal axis instead");
+            }
+        }
+        else if (currentStrategy == "Combined") {
+            ImGui::Text("Combined Strategy Parameters:");
+            ImGui::TextWrapped("Priority order: Rotational Symmetry -> Reflective Symmetry -> PCA");
+            
+            // 策略检测状态提示
+            if (!config.rotationalDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No rotational symmetry detected.");
+            }
+            
+            if (!config.reflectiveDetectionSuccessful) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                    "No reflective symmetry detected.");
+            }
+            
+            // 显示各个子策略的一些基本设置
+            if (ImGui::CollapsingHeader("Rotational Symmetry Settings")) {
+                bool changed = false;
+                changed |= ImGui::SliderInt("Sample Count##combined_rot", &config.rotationSampleCount, 10, 5000);
+                changed |= ImGui::SliderInt("Symmetry Order##combined", &config.rotationSymmetryOrder, 2, 12);
+                
+                if (changed) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+            
+            if (ImGui::CollapsingHeader("Reflective Symmetry Settings")) {
+                if (ImGui::SliderInt("Sample Count##combined_mirror", &config.mirrorSampleCount, 10, 5000)) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+            
+            if (ImGui::CollapsingHeader("PCA Settings")) {
+                if (ImGui::Checkbox("Use Longest Principal Axis##combined_pca", &config.useLongestAxis)) {
+                    // 修改后仅更新配置但不重新计算
+                    MC::applyExplosionAxisConfig(config);
+                }
+            }
+        }
+        
+        // 如果应该显示错误弹窗且之前未显示过
+        if (shouldShowError && !errorShown) {
+            MC::showError("Symmetry Detection Failed", errorMessage);
+            errorShown = true;
+        } else if (!shouldShowError) {
+            // 重置错误显示标志
+            errorShown = false;
+        }
+        
+        ImGui::Separator();
+        
+        // 显示说明信息
+        if (previousStrategy != currentStrategy) {
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
+                "Strategy change will be applied when you click 'Recalculate'");
+        }
+        
+        // 添加重新计算按钮
+        if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
+        {
+            // 如果策略已更改，立即应用新策略
+            if (previousStrategy != currentStrategy) {
+                std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
+                config.strategyName = newInternalStrategy;
+                MC::setExplosionStrategy(newInternalStrategy);
+                MC::applyExplosionAxisConfig(config);
+                previousStrategy = currentStrategy;  // 更新先前策略记录
+            }
+            
+            // 设置重新计算标志
+            *reinterpret_cast<bool*>(ImGui::GetIO().UserData) = true;
+            // 重置错误显示标志，以便在重新计算后能显示新的错误
+            errorShown = false;
+        }
+    }
+    ImGui::End();
+    
+    // 调用渲染弹出窗口的函数
+    MC::renderErrorPopup();
+}
+
+    // 设置弹出错误窗口的函数
+    void showError(const std::string& title, const std::string& message)
+    {
+        errorPopupTitle = title;
+        errorPopupMessage = message;
+        showErrorPopup = true;
+    }
+    
+    // 渲染错误弹出窗口的函数
+    void renderErrorPopup()
+    {
+        if (showErrorPopup)
+        {
+            // 设置弹出窗口大小和位置
+            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
+            
+            // 创建模态弹出窗口
+            if (ImGui::BeginPopupModal(errorPopupTitle.c_str(), &showErrorPopup, 
+                                      ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::TextWrapped("%s", errorPopupMessage.c_str());
+                ImGui::Separator();
+                
+                // 创建居中的确认按钮
+                ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 120) * 0.5f);
+                if (ImGui::Button("OK", ImVec2(120, 0)) || 
+                    ImGui::IsKeyPressed(ImGuiKey_Escape) || 
+                    ImGui::IsKeyPressed(ImGuiKey_Enter))
+                {
+                    showErrorPopup = false;
+                    ImGui::CloseCurrentPopup();
+                }
+                
+                ImGui::EndPopup();
+            }
+            
+            // 如果showErrorPopup为true，打开弹出窗口
+            if (showErrorPopup)
+            {
+                ImGui::OpenPopup(errorPopupTitle.c_str());
+            }
+        }
+    }
 
     // 渲染一帧
     void renderFrame(GLFWwindow *window, unsigned int shaderProgram, unsigned int VAO,
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
-                     unsigned int intersectionVAO, int numIntersectionSegments)
-    {
+                     std::string &currentExplosionStrategy, PostProcess &postProcessor,
+                    unsigned int axisVAO,
+                     unsigned int intersectionVAO, int numIntersectionSegments){
+        
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        
+        // 绑定后处理FBO，渲染到纹理
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
         // clean screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // sart ImGui frame
@@ -310,23 +643,25 @@ void main() {
         ImGui::SameLine();
         ImGui::Text("Current ISO: %.1f", isoLevel);
 
-        // 添加交线显示控制
+        // 添加爆炸视图控制
         ImGui::Separator();
-        if (ImGui::Checkbox("Show Cutting Plane Intersections", &showIntersections))
+        if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
         {
-            std::cout << "Intersection display: " << (showIntersections ? "ON" : "OFF") << std::endl;
-        }
-
-        // 如果有交线可显示，添加一些额外信息
-        if (numIntersectionSegments > 0 && showIntersections)
-        {
-            ImGui::Text("Showing %d intersection segments", numIntersectionSegments);
+            std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
         }
 
         ImGui::End(); // end ImGui panel
 
+        renderExplosionAxisGUI(currentExplosionStrategy);
+        
+        // 渲染弹出错误窗口
+        renderErrorPopup();
+
+        // 渲染ImGui界面
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // viewport size
-        int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (float)width / (float)height;
 
@@ -363,6 +698,25 @@ void main() {
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
+        unsigned int axisShader = createLineShaderProgram();
+        glUseProgram(axisShader);
+
+        // 将之前计算的 model、view、projection 传入该着色器
+        int axisModelLoc = glGetUniformLocation(axisShader, "model");
+        int axisViewLoc = glGetUniformLocation(axisShader, "view");
+        int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+        glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+        // 设置线宽
+        glLineWidth(20.0f);
+
+        // 绑定爆炸轴 VAO 并绘制线段（两个顶点）
+        glBindVertexArray(axisVAO);
+        glDrawArrays(GL_LINES, 0, 2);
+        glBindVertexArray(0);
+
         // 如果启用了交线显示，绘制交线
         if (showIntersections && intersectionVAO != 0 && numIntersectionSegments > 0)
         {
@@ -394,10 +748,127 @@ void main() {
             glDeleteProgram(simpleColorShader);
         }
 
+        // 切换回默认帧缓冲
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // 应用后处理效果
+        postProcessor.render(width, height);
+
         // render ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
+
+    // 爆炸视图渲染函数
+    void MC::renderExplodedView(
+        GLFWwindow *window,
+        const ExplodedView &explodedView,
+        unsigned int shaderProgram,
+        const Mesh &mesh,
+        float &isoLevel,
+        float &tempIsoLevel,
+        const VolumeData &volumeData)
+    {
+        // 开始ImGui帧
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // ImGui面板
+        ImGui::Begin("Marching Cubes Control");
+        ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
+        if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
+        {
+        }
+        if (ImGui::Button("Apply ISO"))
+        {
+            isoLevel = tempIsoLevel;
+        }
+        ImGui::SameLine();
+        ImGui::Text("Current ISO: %.1f", isoLevel);
+
+        // 爆炸视图控制
+        ImGui::Separator();
+        ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections);
+
+        // 爆炸距离控制
+        if (showIntersections)
+        {
+            float explosionDistance = explodedView.explosionDistance;
+            if (ImGui::SliderFloat("Explosion Distance", &explosionDistance, 0.5f, 10.0f, "%.1f"))
+            {
+                // 注意：这里需要修改 explodedView，但由于它是 const 参数，
+                // 需要调用方在外部处理这个距离变更
+            }
+        }
+
+        ImGui::End();
+
+        // 清屏
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // 视口大小
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        float aspect = (float)width / (float)height;
+
+        // 构建变换矩阵
+        glm::mat4 model(1.0f);
+        float scale_factor = 20.0f / mesh.max_dimension;
+        model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
+
+        // 居中模型
+        glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
+        model = glm::translate(model, -glmCenter);
+
+        glm::mat4 view(1.0f);
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -camera.distance * camera.zoom));
+        view = glm::rotate(view, glm::radians(camera.rotationX), glm::vec3(1.0f, 0.0f, 0.0f));
+        view = glm::rotate(view, glm::radians(camera.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
+
+        // 对每个片段进行渲染
+        if (explodedView.enabled)
+        {
+            for (const auto &segment : explodedView.segments)
+            {
+                if (segment.indices.empty() || segment.VAO == 0)
+                {
+                    continue;
+                }
+
+                glUseProgram(shaderProgram);
+
+                // 创建模型矩阵，应用位移
+                glm::mat4 segmentModel = model;
+                segmentModel = glm::translate(segmentModel, glm::vec3(
+                                                                segment.displacement.x,
+                                                                segment.displacement.y,
+                                                                segment.displacement.z));
+
+                // 传递变换矩阵
+                int modelLoc = glGetUniformLocation(shaderProgram, "model");
+                int viewLoc = glGetUniformLocation(shaderProgram, "view");
+                int projLoc = glGetUniformLocation(shaderProgram, "projection");
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(segmentModel));
+                glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+                // 绘制片段
+                glBindVertexArray(segment.VAO);
+                glDrawElements(GL_TRIANGLES, segment.indices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
+        }
+
+        // 渲染ImGui
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+
 
     // 设置ImGui
     void setupImGui(GLFWwindow *window)
