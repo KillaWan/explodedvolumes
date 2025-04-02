@@ -858,17 +858,18 @@ void main() {
         setupImGuiStyle();
 
         // 计算面板位置和大小以垂直排列
-        // 获取主视口大小用于窗口尺寸
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
 
-        float panelWidth = 300.0f;                 // 所有面板的固定宽度
-        float panelHeight = viewportSize.y / 4.0f; // 每个面板占屏幕高度的1/4
-        float spacing = 10.0f;
+        float panelWidth = 300.0f;                   // 所有面板的固定宽度
+        float panelSpacing = 10.0f;                  // 面板间距
+        float panel1Height = viewportSize.y * 0.25f; // 每个面板占屏幕高度的1/4
+        float panel2Height = viewportSize.y * 0.45f;
+        float panel3Height = viewportSize.y * 0.25f;
 
         // 面板1：主控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
@@ -891,14 +892,13 @@ void main() {
         ImGui::End(); // 结束主控制面板
 
         // 面板2：爆炸轴设置
-        // 设置位置和大小，但保持原始逻辑
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 2 + panelHeight));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 1.5f));
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
         renderExplosionAxisGUI(currentExplosionStrategy);
 
-        /// 面板3：爆炸视图控制（新的单独面板）
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2.5f));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 0.8f));
+        // 面板3：爆炸视图控制
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         // 添加爆炸视图控制
@@ -925,7 +925,7 @@ void main() {
             ImGui::EndDisabled();
         }
 
-        ImGui::End(); // 结束爆炸视图控制面板
+        ImGui::End();
 
         // 渲染ImGui界面
         ImGui::Render();
@@ -997,7 +997,6 @@ void main() {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
-    // 爆炸视图渲染函数
     void renderExplodedView(
         GLFWwindow *window,
         const ExplodedView &explodedView,
@@ -1019,13 +1018,15 @@ void main() {
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
 
-        float panelWidth = 300.0f;
-        float panelHeight = viewportSize.y / 5.0f;
-        float spacing = 10.0f;
+        float panelWidth = 300.0f;                   // 所有面板的固定宽度
+        float panelSpacing = 10.0f;                  // 面板间距
+        float panel1Height = viewportSize.y * 0.25f; // 每个面板占屏幕高度的1/4
+        float panel2Height = viewportSize.y * 0.45f;
+        float panel3Height = viewportSize.y * 0.25f;
 
         // 面板1：主控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
@@ -1041,16 +1042,16 @@ void main() {
         ImGui::End();
 
         // 面板2：爆炸轴设置
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 2 + panelHeight));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 1.5f));
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
 
         // 使用当前的爆炸策略或默认策略
         std::string currentStrategy = "";
         renderExplosionAxisGUI(currentStrategy);
 
         // 面板3：爆炸视图控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2.5f));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 0.8f));
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         // 添加爆炸视图控制
