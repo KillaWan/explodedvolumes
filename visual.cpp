@@ -32,7 +32,7 @@ namespace MC
     std::string errorPopupTitle = "Error";
     float g_explosionDistancePercent = 87.5f;
     float g_explosionDistance = 35.0f;
-    bool showExplosionAxis = true;
+    bool showExplosionAxis = false;
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -536,6 +536,18 @@ void main() {
                                    "Using previous axis as fallback.");
                 ImGui::Separator();
 
+                ImGui::Text("Explosion Axis Visibility");
+
+                // 添加复选框控制轴线显示
+                ImGui::Checkbox("Show Explosion Axis", &showExplosionAxis);
+                if (!showExplosionAxis)
+                {
+                    ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                       "Explosion axis is currently hidden");
+                }
+
+                ImGui::End();
+
                 shouldShowError = true;
                 errorMessage = "No symmetry detected with the current strategy!\n\n"
                                "Using previous axis as fallback.\n\n"
@@ -863,9 +875,9 @@ void main() {
 
         float panelWidth = 300.0f;                   // 所有面板的固定宽度
         float panelSpacing = 10.0f;                  // 面板间距
-        float panel1Height = viewportSize.y * 0.25f; // 每个面板占屏幕高度的1/4
+        float panel1Height = viewportSize.y * 0.2f; // 每个面板占屏幕高度的1/4
         float panel2Height = viewportSize.y * 0.45f;
-        float panel3Height = viewportSize.y * 0.25f;
+        float panel3Height = viewportSize.y * 0.2f;
 
         // 面板1：主控制
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
@@ -971,21 +983,25 @@ void main() {
         unsigned int axisShader = createLineShaderProgram();
         glUseProgram(axisShader);
 
-        // 将之前计算的 model、view、projection 传入该着色器
-        int axisModelLoc = glGetUniformLocation(axisShader, "model");
-        int axisViewLoc = glGetUniformLocation(axisShader, "view");
-        int axisProjLoc = glGetUniformLocation(axisShader, "projection");
-        glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        // 仅在 showExplosionAxis 为 true 时绘制轴线
+        if (showExplosionAxis)
+        {
+            // 将之前计算的 model、view、projection 传入该着色器
+            int axisModelLoc = glGetUniformLocation(axisShader, "model");
+            int axisViewLoc = glGetUniformLocation(axisShader, "view");
+            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // 设置线宽
-        glLineWidth(20.0f);
+            // 设置线宽
+            glLineWidth(20.0f);
 
-        // 绑定爆炸轴 VAO 并绘制线段（两个顶点）
-        glBindVertexArray(axisVAO);
-        glDrawArrays(GL_LINES, 0, 2);
-        glBindVertexArray(0);
+            // 绑定爆炸轴 VAO 并绘制线段（两个顶点）
+            glBindVertexArray(axisVAO);
+            glDrawArrays(GL_LINES, 0, 2);
+            glBindVertexArray(0);
+        }
 
         // 切换回默认帧缓冲
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -995,6 +1011,28 @@ void main() {
 
         // 渲染ImGui
         ImGui::Render();
+        // 仅在 showExplosionAxis 为 true 时绘制轴线
+        if (showExplosionAxis)
+        {
+            unsigned int axisShader = createLineShaderProgram();
+            glUseProgram(axisShader);
+
+            // 将之前计算的 model、view、projection 传入该着色器
+            int axisModelLoc = glGetUniformLocation(axisShader, "model");
+            int axisViewLoc = glGetUniformLocation(axisShader, "view");
+            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+            // 设置线宽
+            glLineWidth(20.0f);
+
+            // 绘制轴线 - 需要您确认是否有axisVAO
+            glBindVertexArray(axisVAO);
+            glDrawArrays(GL_LINES, 0, 2);
+            glBindVertexArray(0);
+        }
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
     void renderExplodedView(
@@ -1020,9 +1058,9 @@ void main() {
 
         float panelWidth = 300.0f;                   // 所有面板的固定宽度
         float panelSpacing = 10.0f;                  // 面板间距
-        float panel1Height = viewportSize.y * 0.25f; // 每个面板占屏幕高度的1/4
+        float panel1Height = viewportSize.y * 0.2f; // 每个面板占屏幕高度的1/4
         float panel2Height = viewportSize.y * 0.45f;
-        float panel3Height = viewportSize.y * 0.25f;
+        float panel3Height = viewportSize.y * 0.2f;
 
         // 面板1：主控制
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
