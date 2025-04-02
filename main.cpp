@@ -220,7 +220,9 @@ int main()
 
     // initialize mesh and Marching Cubes
     Mesh mesh;
-    float isoLevel = 50.0f;
+    float isoLevelPercent = 10.0f;
+    float tempIsoLevelPercent = isoLevelPercent;
+    float isoLevel = volumeData.minValue + (MC::g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
     float tempIsoLevel = isoLevel;
     generateMesh(volumeData, isoLevel, mesh);
 
@@ -316,15 +318,18 @@ int main()
             lastExplosionDistance = explodedView.explosionDistance;
         }
 
+        tempIsoLevel = volumeData.minValue + (MC::g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
+
         // 如果ISO值已更改，重新生成网格
         if (isoLevel != lastIsoLevel)
         {
+            // 更新百分比值和绝对值
+            isoLevel = volumeData.minValue + (MC::g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
             handleIsoLevelChange(
                 volumeData, isoLevel, mesh, VAO, VBO, EBO,
                 explosionAxis, axisStart, axisEnd, axisVBO,
                 cuttingPlanes,
                 explodedView);
-            
             lastIsoLevel = isoLevel;
         }
 

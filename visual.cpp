@@ -33,6 +33,8 @@ namespace MC
     float g_explosionDistancePercent = 87.5f;
     float g_explosionDistance = 35.0f;
     bool showExplosionAxis = true;
+    float g_isoLevelPercent = 10.0f;      // 默认为50%
+    float g_tempIsoLevelPercent = 10.0f;  // 默认值
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -874,20 +876,22 @@ void main() {
 
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
 
-        // 从min_val到max_val的滑块
-        if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
+        // 从0-100的百分比滑块
+        if (ImGui::SliderFloat("ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
         {
-            // (如果您想等待按钮，这里不需要立即重新计算)
+            // 转换百分比到绝对值
+            tempIsoLevel = volumeData.minValue + (g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
 
         // 应用ISO值的按钮
         if (ImGui::Button("Apply ISO"))
         {
-            isoLevel = tempIsoLevel;
+            g_isoLevelPercent = g_tempIsoLevelPercent;
+            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
             // 调用者需处理网格重新生成
         }
         ImGui::SameLine();
-        ImGui::Text("Current ISO: %.1f", isoLevel);
+        ImGui::Text("Current ISO: %.1f (%.1f%%)", isoLevel, g_isoLevelPercent);
 
         ImGui::End(); // 结束主控制面板
 
@@ -1029,16 +1033,22 @@ void main() {
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
-        if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
+        // 从0-100的百分比滑块
+        if (ImGui::SliderFloat("ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
         {
+            // 转换百分比到绝对值
+            tempIsoLevel = volumeData.minValue + (g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
+
+        // 应用ISO值的按钮
         if (ImGui::Button("Apply ISO"))
         {
-            isoLevel = tempIsoLevel;
+            g_isoLevelPercent = g_tempIsoLevelPercent;
+            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
+            // 调用者需处理网格重新生成
         }
         ImGui::SameLine();
-        ImGui::Text("Current ISO: %.1f", isoLevel);
+        ImGui::Text("Current ISO: %.1f (%.1f%%)", isoLevel, g_isoLevelPercent);
         ImGui::End();
 
         // 面板2：爆炸轴设置
