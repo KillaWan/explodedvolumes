@@ -57,7 +57,8 @@ namespace MC
         const Mesh &mesh,
         float &isoLevel,
         float &tempIsoLevel,
-        const VolumeData &volumeData);
+        const VolumeData &volumeData,
+        unsigned int axisVAO);
 
     // UI相关函数
     void setupImGui(GLFWwindow *window);
