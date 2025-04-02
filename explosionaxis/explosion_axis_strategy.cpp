@@ -411,23 +411,12 @@ void ExplosionAxisManager::setStrategy(std::shared_ptr<ExplosionAxisStrategy> st
 }
 
 Vec3 ExplosionAxisManager::computeExplosionAxis(const std::vector<Vertex>& meshVertices) {
-    if (m_config.useCustomExplosionAxis) {
-        std::cout << "Using custom explosion axis: (" 
-                  << m_config.customExplosionAxis.x << ", " 
-                  << m_config.customExplosionAxis.y << ", " 
-                  << m_config.customExplosionAxis.z << ")" << std::endl;
-        
-        // 直接返回自定义爆炸轴
-        return m_config.customExplosionAxis;
-    }
-    
-    // 原有逻辑 - 使用策略计算爆炸轴
     if (m_currentStrategy) {
         std::cout << "Using strategy '" << m_currentStrategy->getName() << "' to compute explosion axis" << std::endl;
         return m_currentStrategy->computeAxis(meshVertices);
     }
     
-    // 默认返回z轴
+    // Default return z-axis
     std::cout << "Warning: No valid strategy set, using default z-axis as explosion axis" << std::endl;
     return Vec3(0, 0, 1);
 }

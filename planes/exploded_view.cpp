@@ -51,10 +51,11 @@ namespace MC
     ExplodedView computeExplodedView(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
-        const Vec3 &explosionAxis)
+        const Vec3 &explosionAxis,
+        float explosionDistance)
     {
         ExplodedView explodedView;
-        explodedView.explosionDistance = 35.0f;
+        explodedView.explosionDistance = explosionDistance;
         float segmentGap = explodedView.explosionDistance;
 
         // 片段间的间距

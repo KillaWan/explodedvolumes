@@ -38,7 +38,8 @@ namespace MC
     ExplodedView computeExplodedView(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
-        const Vec3 &explosionAxis);
+        const Vec3 &explosionAxis,
+        float explosionDistance = 35.0f);
 
     // 更新爆炸视图的位移
     void updateExplodedViewDisplacements(

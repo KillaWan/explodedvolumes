@@ -39,9 +39,6 @@ void handleIsoLevelChange(
     MC::Vertex &axisEnd,
     unsigned int axisVBO,
     std::vector<MC::CuttingPlane> &cuttingPlanes,
-    MC::PlaneIntersection &planeIntersection,
-    unsigned int intersectionVAO,
-    unsigned int intersectionVBO,
     MC::ExplodedView &explodedView)
 {
     // 重新生成网格
@@ -66,15 +63,15 @@ void handleIsoLevelChange(
     // 重新生成切割平面
     cuttingPlanes = MC::generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3);
 
-    // 重新计算切割平面与网格的交线
-    planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
+    // // 重新计算切割平面与网格的交线
+    // planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
 
-    // 更新交线VAO/VBO
-    MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
+    // // 更新交线VAO/VBO
+    // MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
 
     // 重新计算爆炸视图
     MC::cleanupExplodedView(explodedView);
-    explodedView = MC::computeExplodedView(mesh, cuttingPlanes, explosionAxis);
+    explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis, MC::g_explosionDistance);
 
     // 为爆炸视图中的每个片段设置VAO/VBO/EBO
     for (auto &segment : explodedView.segments)
@@ -93,9 +90,6 @@ void recalculateExplosionAxisAndView(
     MC::Vertex &axisEnd,
     unsigned int axisVBO,
     std::vector<MC::CuttingPlane> &cuttingPlanes,
-    MC::PlaneIntersection &planeIntersection,
-    unsigned int intersectionVAO,
-    unsigned int intersectionVBO,
     MC::ExplodedView &explodedView,
     float &lastExplosionDistance)
 {
@@ -150,14 +144,14 @@ void recalculateExplosionAxisAndView(
     cuttingPlanes = MC::generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3); // 3个切割平面
 
     // 重新计算切割平面与网格的交线
-    planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
+    // planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
     
     // 更新交线VAO/VBO
-    MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
+    // MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
 
     // 重新计算爆炸视图
-    explodedView = MC::computeExplodedView(mesh, cuttingPlanes, explosionAxis);
-    
+    explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis, MC::g_explosionDistance);
+
     // 恢复之前的爆炸设置
     explodedView.enabled = wasEnabled;
     explodedView.explosionDistance = currentExplosionDistance;
@@ -274,13 +268,6 @@ int main()
     // 生成切割平面
     std::vector<CuttingPlane> cuttingPlanes = generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3);
 
-    // 计算切割平面与网格的交线
-    PlaneIntersection planeIntersection = computePlaneIntersections(mesh, cuttingPlanes);
-
-    // 创建用于显示交线的VAO/VBO
-    unsigned int intersectionVAO, intersectionVBO;
-    setupIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
-
     // 计算爆炸视图
     ExplodedView explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis);
 
@@ -314,8 +301,7 @@ int main()
         {
             // 正常渲染完整模型
             renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel,
-                        tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor, axisVAO,
-                        intersectionVAO, planeIntersection.segments.size());
+                        tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor, axisVAO);
         }
         else
         {
@@ -336,7 +322,7 @@ int main()
             handleIsoLevelChange(
                 volumeData, isoLevel, mesh, VAO, VBO, EBO,
                 explosionAxis, axisStart, axisEnd, axisVBO,
-                cuttingPlanes, planeIntersection, intersectionVAO, intersectionVBO,
+                cuttingPlanes,
                 explodedView);
             
             lastIsoLevel = isoLevel;
@@ -349,7 +335,7 @@ int main()
             recalculateExplosionAxisAndView(
                 mesh, explosionAxis, currentExplosionStrategy, lastStrategy,
                 axisStart, axisEnd, axisVBO,
-                cuttingPlanes, planeIntersection, intersectionVAO, intersectionVBO,
+                cuttingPlanes,
                 explodedView, lastExplosionDistance);
             
             // 重置标志
@@ -367,8 +353,6 @@ int main()
     glDeleteBuffers(1, &EBO);
     glDeleteVertexArrays(1, &axisVAO);
     glDeleteBuffers(1, &axisVBO);
-    glDeleteVertexArrays(1, &intersectionVAO);
-    glDeleteBuffers(1, &intersectionVBO);
     glDeleteProgram(shaderProgram);
     glDeleteProgram(lineShaderProgram);
 

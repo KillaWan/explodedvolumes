@@ -30,6 +30,9 @@ namespace MC
     bool showErrorPopup = false;
     std::string errorPopupMessage = "";
     std::string errorPopupTitle = "Error";
+    float g_explosionDistancePercent = 87.5f;
+    float g_explosionDistance = 35.0f;
+    bool showExplosionAxis = true;
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -427,7 +430,7 @@ void main() {
 
             // 添加自定义爆炸轴控制（在策略选择之前显示）
             ImGui::Text("Custom Explosion Axis");
-            
+
             if (ImGui::Checkbox("Use Custom Axis", &config.useCustomExplosionAxis))
             {
                 // 切换状态时的行为
@@ -436,11 +439,11 @@ void main() {
                     // 如果取消自定义轴，恢复策略计算的轴
                     *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true; // 触发重新计算
                 }
-                
+
                 // 应用配置更新
                 MC::applyExplosionAxisConfig(config);
             }
-            
+
             if (config.useCustomExplosionAxis)
             {
                 // 自定义X,Y,Z轴控制
@@ -448,18 +451,19 @@ void main() {
                 axisChanged |= ImGui::DragFloat("Axis X", &config.customExplosionAxis.x, 0.01f, -1.0f, 1.0f);
                 axisChanged |= ImGui::DragFloat("Axis Y", &config.customExplosionAxis.y, 0.01f, -1.0f, 1.0f);
                 axisChanged |= ImGui::DragFloat("Axis Z", &config.customExplosionAxis.z, 0.01f, -1.0f, 1.0f);
-                
-                if (axisChanged) {
+
+                if (axisChanged)
+                {
                     // 如果轴值改变，应用配置更新
                     MC::applyExplosionAxisConfig(config);
                 }
-                
+
                 // 计算轴向量长度
                 float length = std::sqrt(
                     config.customExplosionAxis.x * config.customExplosionAxis.x +
                     config.customExplosionAxis.y * config.customExplosionAxis.y +
                     config.customExplosionAxis.z * config.customExplosionAxis.z);
-                
+
                 // 显示归一化的轴向量
                 if (length > 0.0001f)
                 {
@@ -468,7 +472,7 @@ void main() {
                                 config.customExplosionAxis.y / length,
                                 config.customExplosionAxis.z / length);
                 }
-                
+
                 // 应用自定义轴的按钮
                 if (ImGui::Button("Apply Custom Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
                 {
@@ -478,18 +482,17 @@ void main() {
                         Vec3 normalizedAxis = {
                             config.customExplosionAxis.x / length,
                             config.customExplosionAxis.y / length,
-                            config.customExplosionAxis.z / length
-                        };
-                        
+                            config.customExplosionAxis.z / length};
+
                         // 更新配置中的自定义轴为归一化后的值
                         config.customExplosionAxis = normalizedAxis;
-                        
+
                         // 应用配置
                         MC::applyExplosionAxisConfig(config);
-                        
+
                         // 重绘模型 - 设置重新计算标志
                         *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
-                        
+
                         // 显示成功应用的提示
                         ImGui::TextColored(ImVec4(0.0f, 0.6f, 0.0f, 1.0f), "Custom axis applied!");
                     }
@@ -499,10 +502,10 @@ void main() {
                     }
                 }
             }
-            
+
             ImGui::Separator();
             ImGui::Text("Strategy Selection");
-            
+
             // 创建下拉选择框
             if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
             {
@@ -528,15 +531,15 @@ void main() {
             if (!config.lastDetectionSuccessful)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f),
-                                "No symmetry detected with current strategy!");
+                                   "No symmetry detected with current strategy!");
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                "Using previous axis as fallback.");
+                                   "Using previous axis as fallback.");
                 ImGui::Separator();
 
                 shouldShowError = true;
                 errorMessage = "No symmetry detected with the current strategy!\n\n"
-                            "Using previous axis as fallback.\n\n"
-                            "Try adjusting the parameters or selecting a different strategy.";
+                               "Using previous axis as fallback.\n\n"
+                               "Try adjusting the parameters or selecting a different strategy.";
             }
 
             // 以下代码与原始函数相同，根据策略显示不同参数
@@ -548,12 +551,12 @@ void main() {
                 if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                    "No rotational symmetry detected in last analysis.");
+                                       "No rotational symmetry detected in last analysis.");
 
                     shouldShowError = true;
                     errorMessage = "No rotational symmetry detected in last analysis.\n\n"
-                                "Try adjusting the sample count or symmetry order,\n"
-                                "or switch to a different strategy.";
+                                   "Try adjusting the sample count or symmetry order,\n"
+                                   "or switch to a different strategy.";
                 }
 
                 // 采样点数量
@@ -614,12 +617,12 @@ void main() {
                 if (!config.reflectiveDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                    "No reflective symmetry detected in last analysis.");
+                                       "No reflective symmetry detected in last analysis.");
 
                     shouldShowError = true;
                     errorMessage = "No reflective symmetry detected in last analysis.\n\n"
-                                "Try adjusting the sample count or providing a custom mirror normal,\n"
-                                "or switch to a different strategy.";
+                                   "Try adjusting the sample count or providing a custom mirror normal,\n"
+                                   "or switch to a different strategy.";
                 }
 
                 // 采样点数量
@@ -688,13 +691,13 @@ void main() {
                 if (!config.rotationalDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                    "No rotational symmetry detected.");
+                                       "No rotational symmetry detected.");
                 }
 
                 if (!config.reflectiveDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                    "No reflective symmetry detected.");
+                                       "No reflective symmetry detected.");
                 }
 
                 // 显示各个子策略的一些基本设置
@@ -748,7 +751,7 @@ void main() {
             if (previousStrategy != currentStrategy && !config.useCustomExplosionAxis)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                "Strategy change will be applied when you click 'Recalculate'");
+                                   "Strategy change will be applied when you click 'Recalculate'");
             }
 
             // 添加重新计算按钮（仅在未选择自定义轴时显示）
@@ -835,8 +838,7 @@ void main() {
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
                      std::string &currentExplosionStrategy, PostProcess &postProcessor,
-                     unsigned int axisVAO,
-                     unsigned int intersectionVAO, int numIntersectionSegments)
+                     unsigned int axisVAO)
     {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
@@ -901,12 +903,36 @@ void main() {
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 1.5f));
         renderExplosionAxisGUI(currentExplosionStrategy);
 
-        // 面板3：预留给未来使用（如果需要）
-        // ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2));
-        // ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
-        // ImGui::Begin("Additional Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        // // 如果需要，在这里添加其他控件
-        // ImGui::End();
+        /// 面板3：爆炸视图控制（新的单独面板）
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2.5f));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 0.8f));
+        ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        // 添加爆炸视图控制
+        if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
+        {
+            std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
+        }
+
+        // 爆炸距离控制
+        const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
+        if (showIntersections)
+        {
+            if (ImGui::SliderFloat("Explosion Distance", &g_explosionDistancePercent, 0.0f, 100.0f, "%.1f%%"))
+            {
+                // 转换百分比到实际距离
+                g_explosionDistance = (g_explosionDistancePercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
+            }
+        }
+        else
+        {
+            // 禁用状态下的滑块
+            ImGui::BeginDisabled();
+            ImGui::SliderFloat("Explosion Distance", &g_explosionDistancePercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::EndDisabled();
+        }
+
+        ImGui::End(); // 结束爆炸视图控制面板
 
         // 渲染ImGui界面
         ImGui::Render();
@@ -968,37 +994,6 @@ void main() {
         glDrawArrays(GL_LINES, 0, 2);
         glBindVertexArray(0);
 
-        // 如果启用了交线显示，绘制交线
-        if (showIntersections && intersectionVAO != 0 && numIntersectionSegments > 0)
-        {
-            // 使用简单的着色器来绘制红色线段
-            unsigned int simpleColorShader = createLineShaderProgram();
-            glUseProgram(simpleColorShader);
-
-            // 传递变换矩阵
-            int modelLoc = glGetUniformLocation(simpleColorShader, "model");
-            int viewLoc = glGetUniformLocation(simpleColorShader, "view");
-            int projLoc = glGetUniformLocation(simpleColorShader, "projection");
-
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-            // 设置线宽和颜色
-            glLineWidth(3.0f);
-
-            // 绘制交线
-            glBindVertexArray(intersectionVAO);
-            glDrawArrays(GL_LINES, 0, numIntersectionSegments * 2);
-            glBindVertexArray(0);
-
-            // 恢复线宽
-            glLineWidth(1.0f);
-
-            // 删除着色器程序
-            glDeleteProgram(simpleColorShader);
-        }
-
         // 切换回默认帧缓冲
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1010,7 +1005,7 @@ void main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
     // 爆炸视图渲染函数
-    void MC::renderExplodedView(
+    void renderExplodedView(
         GLFWwindow *window,
         const ExplodedView &explodedView,
         unsigned int shaderProgram,
@@ -1032,7 +1027,7 @@ void main() {
         ImVec2 viewportSize = viewport->Size;
 
         float panelWidth = 300.0f;
-        float panelHeight = viewportSize.y / 4.0f;
+        float panelHeight = viewportSize.y / 5.0f;
         float spacing = 10.0f;
 
         // 面板1：主控制
@@ -1050,20 +1045,51 @@ void main() {
         }
         ImGui::SameLine();
         ImGui::Text("Current ISO: %.1f", isoLevel);
+        ImGui::End();
 
-        // 爆炸视图控制
-        ImGui::Separator();
-        ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections);
+        // 面板2：爆炸轴设置
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 2 + panelHeight));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 1.5f));
+
+        // 使用当前的爆炸策略或默认策略
+        std::string currentStrategy = "";
+        renderExplosionAxisGUI(currentStrategy);
+
+        // 面板3：爆炸视图控制
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, spacing * 3 + panelHeight * 2.5f));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight * 0.8f));
+        ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        // 添加爆炸视图控制
+        if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
+        {
+            std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
+        }
+
+        // 爆炸距离控制
+        const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
 
         // 爆炸距离控制
         if (showIntersections)
         {
-            float explosionDistance = explodedView.explosionDistance;
-            if (ImGui::SliderFloat("Explosion Distance", &explosionDistance, 0.5f, 10.0f, "%.1f"))
+            // 计算当前爆炸距离的百分比
+            float currentDistancePercent = (explodedView.explosionDistance / MAX_EXPLOSION_DISTANCE) * 100.0f;
+            float tempDistancePercent = currentDistancePercent;
+
+            if (ImGui::SliderFloat("Explosion Distance", &tempDistancePercent, 0.0f, 100.0f, "%.1f%%"))
             {
-                // 注意：这里需要修改 explodedView，但由于它是 const 参数，
-                // 需要调用方在外部处理这个距离变更
+                // 通过全局变量传递更改
+                g_explosionDistancePercent = tempDistancePercent;
+                g_explosionDistance = (tempDistancePercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
             }
+        }
+        else
+        {
+            // 禁用状态下的滑块
+            float dummyDistancePercent = g_explosionDistancePercent;
+            ImGui::BeginDisabled();
+            ImGui::SliderFloat("Explosion Distance", &dummyDistancePercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::EndDisabled();
         }
 
         ImGui::End();
@@ -1258,107 +1284,100 @@ void main() {
     }
 
     // 修改runRenderingLoop函数中的postProcessor初始化部分
-void runRenderingLoop(GLFWwindow* window, const VolumeData& volumeData, Mesh& mesh)
-{
-    // 设置初始状态
-    float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f;  // 从中间值开始
-    float tempIsoLevel = isoLevel;
-    
-    // 相机初始化
-    camera.distance = 100.0f;
-    camera.zoom = 1.0f;
-    camera.rotationX = 0.0f;
-    camera.rotationY = 0.0f;
-    
-    // 设置着色器
-    unsigned int shaderProgram = createShaderProgram();
-    
-    // 设置网格
-    unsigned int VAO, VBO, EBO;
-    setupMesh(mesh, VAO, VBO, EBO);
-    
-    // 设置轴可视化
-    unsigned int axisVAO = 0;
-    // 初始化axisVAO和相关缓冲区
-    
-    // 设置交线可视化
-    unsigned int intersectionVAO = 0;
-    int numIntersectionSegments = 0;
-    // 初始化intersectionVAO和相关缓冲区
-    
-    // 获取窗口大小来初始化后处理器
-    int windowWidth, windowHeight;
-    glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
-    
-    // 设置后处理，传入窗口宽度和高度
-    PostProcess postProcessor;
-    postProcessor.init(windowWidth, windowHeight);
-    
-    // 当前爆炸策略 
-    std::string currentExplosionStrategy = "";
-    
-    // 重新计算标志（用于ImGui）
-    bool recalculateNeeded = false;
-    ImGuiIO& io = ImGui::GetIO();
-    io.UserData = &recalculateNeeded;
-    
-    // 主渲染循环
-    while (!glfwWindowShouldClose(window))
+    void runRenderingLoop(GLFWwindow *window, const VolumeData &volumeData, Mesh &mesh)
     {
-        // 轮询事件
-        glfwPollEvents();
-        
-        // 检查窗口大小是否改变，如果改变则重新初始化后处理器
-        int currentWidth, currentHeight;
-        glfwGetFramebufferSize(window, &currentWidth, &currentHeight);
-        if (currentWidth != windowWidth || currentHeight != windowHeight) {
-            windowWidth = currentWidth;
-            windowHeight = currentHeight;
-            postProcessor.cleanup();
-            postProcessor.init(windowWidth, windowHeight);
-        }
-        
-        // 检查是否需要基于UI交互进行重新计算
-        if (recalculateNeeded)
+        // 设置初始状态
+        float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f; // 从中间值开始
+        float tempIsoLevel = isoLevel;
+
+        // 相机初始化
+        camera.distance = 100.0f;
+        camera.zoom = 1.0f;
+        camera.rotationX = 0.0f;
+        camera.rotationY = 0.0f;
+
+        // 设置着色器
+        unsigned int shaderProgram = createShaderProgram();
+
+        // 设置网格
+        unsigned int VAO, VBO, EBO;
+        setupMesh(mesh, VAO, VBO, EBO);
+
+        // 设置轴可视化
+        unsigned int axisVAO = 0;
+        // 初始化axisVAO和相关缓冲区
+
+        // 获取窗口大小来初始化后处理器
+        int windowWidth, windowHeight;
+        glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+
+        // 设置后处理，传入窗口宽度和高度
+        PostProcess postProcessor;
+        postProcessor.init(windowWidth, windowHeight);
+
+        // 当前爆炸策略
+        std::string currentExplosionStrategy = "";
+
+        // 重新计算标志（用于ImGui）
+        bool recalculateNeeded = false;
+        ImGuiIO &io = ImGui::GetIO();
+        io.UserData = &recalculateNeeded;
+
+        // 主渲染循环
+        while (!glfwWindowShouldClose(window))
         {
-            // 在这里执行重新计算
-            // ...
-            
-            // 重置标志
-            recalculateNeeded = false;
+            // 轮询事件
+            glfwPollEvents();
+
+            // 检查窗口大小是否改变，如果改变则重新初始化后处理器
+            int currentWidth, currentHeight;
+            glfwGetFramebufferSize(window, &currentWidth, &currentHeight);
+            if (currentWidth != windowWidth || currentHeight != windowHeight)
+            {
+                windowWidth = currentWidth;
+                windowHeight = currentHeight;
+                postProcessor.cleanup();
+                postProcessor.init(windowWidth, windowHeight);
+            }
+
+            // 检查是否需要基于UI交互进行重新计算
+            if (recalculateNeeded)
+            {
+                // 在这里执行重新计算
+                // ...
+
+                // 重置标志
+                recalculateNeeded = false;
+            }
+
+            // 更新视口
+            updateViewport(window);
+
+            // 渲染帧
+            renderFrame(window, shaderProgram, VAO, mesh, camera, isoLevel, tempIsoLevel,
+                        volumeData, currentExplosionStrategy, postProcessor,
+                        axisVAO);
+
+            // 交换缓冲区
+            glfwSwapBuffers(window);
         }
-        
-        // 更新视口 
-        updateViewport(window);
-        
-        // 渲染帧
-        renderFrame(window, shaderProgram, VAO, mesh, camera, isoLevel, tempIsoLevel,
-                   volumeData, currentExplosionStrategy, postProcessor, 
-                   axisVAO, intersectionVAO, numIntersectionSegments);
-        
-        // 交换缓冲区
-        glfwSwapBuffers(window);
+
+        // 清理
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &EBO);
+        glDeleteProgram(shaderProgram);
+
+        if (axisVAO != 0)
+            glDeleteVertexArrays(1, &axisVAO);
+
+        // 清理后处理器
+        postProcessor.cleanup();
+
+        // 清理ImGui
+        cleanupImGui();
+
+        // 终止GLFW
+        glfwTerminate();
     }
-    
-    // 清理
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
-    
-    if (axisVAO != 0)
-        glDeleteVertexArrays(1, &axisVAO);
-    
-    if (intersectionVAO != 0)
-        glDeleteVertexArrays(1, &intersectionVAO);
-    
-    // 清理后处理器
-    postProcessor.cleanup();
-    
-    // 清理ImGui
-    cleanupImGui();
-    
-    // 终止GLFW
-    glfwTerminate();
-}
 } // namespace MC

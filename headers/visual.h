@@ -17,6 +17,10 @@ namespace MC
     extern std::string errorPopupMessage;
     extern std::string errorPopupTitle;
 
+    // 爆炸距离相关全局变量
+    extern float g_explosionDistancePercent; // 爆炸距离百分比（0-100%）
+    extern float g_explosionDistance;        // 实际爆炸距离值
+
     // 着色器相关函数
     unsigned int compileShader(unsigned int type, const char *src);
     unsigned int createShaderProgram();
@@ -39,8 +43,7 @@ namespace MC
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
                      std::string &currentExplosionStrategy, PostProcess &postProcessor,
-                     unsigned int axisVAO,
-                     unsigned int intersectionVAO = 0, int numIntersectionSegments = 0);
+                     unsigned int axisVAO);
 
     // 爆炸视图渲染函数
     void renderExplodedView(
