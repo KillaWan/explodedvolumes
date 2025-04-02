@@ -298,6 +298,14 @@ int main()
         // 更新爆炸视图状态
         explodedView.enabled = showIntersections;
 
+        // 在main.cpp的主循环中添加代码来同步爆炸距离
+        if (g_explosionDistance != explodedView.explosionDistance)
+        {
+            explodedView.explosionDistance = g_explosionDistance;
+            updateExplodedViewDisplacements(explodedView, explosionAxis, explodedView.explosionDistance);
+            lastExplosionDistance = explodedView.explosionDistance;
+        }
+
         // 渲染当前帧
         if (!explodedView.enabled)
         {
@@ -317,7 +325,6 @@ int main()
             updateExplodedViewDisplacements(explodedView, explosionAxis, explodedView.explosionDistance);
             lastExplosionDistance = explodedView.explosionDistance;
         }
-
         tempIsoLevel = volumeData.minValue + (MC::g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
 
         // 如果ISO值已更改，重新生成网格
@@ -330,6 +337,7 @@ int main()
                 explosionAxis, axisStart, axisEnd, axisVBO,
                 cuttingPlanes,
                 explodedView);
+            
             lastIsoLevel = isoLevel;
         }
 

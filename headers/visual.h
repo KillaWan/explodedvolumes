@@ -17,13 +17,12 @@ namespace MC
     extern std::string errorPopupMessage;
     extern std::string errorPopupTitle;
     // ISO Level百分比相关全局变量
-    extern float g_isoLevelPercent;       // ISO Level百分比值（0-100%）
-    extern float g_tempIsoLevelPercent;   // 临时的ISO Level百分比值
+    extern float g_isoLevelPercent; // ISO Level百分比值（0-100%）
+    extern float g_tempIsoLevelPercent;
 
     // 爆炸距离相关全局变量
     extern float g_explosionDistancePercent; // 爆炸距离百分比（0-100%）
     extern float g_explosionDistance;        // 实际爆炸距离值
-
 
     // 着色器相关函数
     unsigned int compileShader(unsigned int type, const char *src);

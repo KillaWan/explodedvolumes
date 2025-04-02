@@ -32,10 +32,10 @@ namespace MC
     std::string errorPopupTitle = "Error";
     float g_explosionDistancePercent = 87.5f;
     float g_explosionDistance = 35.0f;
-
     bool showExplosionAxis = false;
-    float g_isoLevelPercent = 10.0f;    
-    float g_tempIsoLevelPercent = 10.0f; 
+    float g_isoLevelPercent = 10.0f; // 默认为50%
+    float g_tempIsoLevelPercent = 10.0f;
+    float tempExplosionPercent = g_explosionDistancePercent; // 添加这个全局变量
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -723,7 +723,7 @@ void main() {
         if (ImGui::Button("Apply ISO"))
         {
             g_isoLevelPercent = g_tempIsoLevelPercent;
-            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
+            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue); 
             // 调用者需处理网格重新生成
         }
         ImGui::SameLine();
@@ -749,19 +749,45 @@ void main() {
 
         // 爆炸距离控制
         const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
+
+        // 创建一个静态临时变量用于滑块
+        static bool firstRun = true;
+        if (firstRun)
+        {
+            tempExplosionPercent = g_explosionDistancePercent;
+            firstRun = false;
+        }
+
         if (showIntersections)
         {
-            if (ImGui::SliderFloat("Explosion Distance", &g_explosionDistancePercent, 0.0f, 100.0f, "%.1f%%"))
+            // 滑块控制临时值
+            if (ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
             {
-                // 转换百分比到实际距离
+                // 不立即应用，等用户点击按钮确认
+            }
+
+            // 应用按钮
+            if (ImGui::Button("Apply Distance"))
+            {
+                // 应用临时值到实际使用的变量
+                g_explosionDistancePercent = tempExplosionPercent;
                 g_explosionDistance = (g_explosionDistancePercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
             }
+
+            ImGui::SameLine();
+            ImGui::Text("Current: %.1f%%", g_explosionDistancePercent);
         }
         else
         {
-            // 禁用状态下的滑块
+            // 禁用状态下的滑块和按钮
             ImGui::BeginDisabled();
-            ImGui::SliderFloat("Explosion Distance", &g_explosionDistancePercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
+            if (ImGui::Button("Apply Distance"))
+            {
+                // 禁用状态不会触发
+            }
+            ImGui::SameLine();
+            ImGui::Text("Current: %.1f%%", g_explosionDistancePercent);
             ImGui::EndDisabled();
         }
 
@@ -897,22 +923,16 @@ void main() {
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        // 从0-100的百分比滑块
-        if (ImGui::SliderFloat("ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
+        ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
+        if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
         {
-            // 转换百分比到绝对值
-            tempIsoLevel = volumeData.minValue + (g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
-
-        // 应用ISO值的按钮
         if (ImGui::Button("Apply ISO"))
         {
-            g_isoLevelPercent = g_tempIsoLevelPercent;
-            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
-            // 调用者需处理网格重新生成
+            isoLevel = tempIsoLevel;
         }
         ImGui::SameLine();
-        ImGui::Text("Current ISO: %.1f (%.1f%%)", isoLevel, g_isoLevelPercent);
+        ImGui::Text("Current ISO: %.1f", isoLevel);
         ImGui::End();
 
         // 面板2：爆炸轴设置
@@ -937,26 +957,45 @@ void main() {
         // 爆炸距离控制
         const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
 
-        // 爆炸距离控制
         if (showIntersections)
         {
-            // 计算当前爆炸距离的百分比
+            // 计算当前爆炸距离的百分比用于显示
             float currentDistancePercent = (explodedView.explosionDistance / MAX_EXPLOSION_DISTANCE) * 100.0f;
-            float tempDistancePercent = currentDistancePercent;
-
-            if (ImGui::SliderFloat("Explosion Distance", &tempDistancePercent, 0.0f, 100.0f, "%.1f%%"))
+            static bool firstRun = true;
+            if (firstRun)
             {
-                // 通过全局变量传递更改
-                g_explosionDistancePercent = tempDistancePercent;
-                g_explosionDistance = (tempDistancePercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
+                tempExplosionPercent = g_explosionDistancePercent;
+                firstRun = false;
             }
+
+            // 滑块控制临时值
+            if (ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
+            {
+                // 不立即应用，等用户点击按钮确认
+            }
+
+            // 应用按钮
+            if (ImGui::Button("Apply Distance"))
+            {
+                // 应用临时值到实际使用的变量
+                g_explosionDistancePercent = tempExplosionPercent;
+                g_explosionDistance = (tempExplosionPercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
+            }
+
+            ImGui::SameLine();
+            ImGui::Text("Current: %.1f%%", currentDistancePercent);
         }
         else
         {
-            // 禁用状态下的滑块
-            float dummyDistancePercent = g_explosionDistancePercent;
+            // 禁用状态下的滑块和按钮
             ImGui::BeginDisabled();
-            ImGui::SliderFloat("Explosion Distance", &dummyDistancePercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
+            if (ImGui::Button("Apply Distance"))
+            {
+                // 禁用状态不会触发
+            }
+            ImGui::SameLine();
+            ImGui::Text("Current: %.1f%%", g_explosionDistancePercent);
             ImGui::EndDisabled();
         }
 
