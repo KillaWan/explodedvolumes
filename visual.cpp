@@ -888,13 +888,6 @@ void main() {
         ImGui::SameLine();
         ImGui::Text("Current ISO: %.1f", isoLevel);
 
-        // 添加爆炸视图控制
-        ImGui::Separator();
-        if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
-        {
-            std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
-        }
-
         ImGui::End(); // 结束主控制面板
 
         // 面板2：爆炸轴设置
