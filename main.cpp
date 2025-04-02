@@ -306,7 +306,7 @@ int main()
         else
         {
             // 渲染爆炸视图
-            renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData);
+            renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData, axisVAO);
         }
 
         // 处理爆炸距离更新 (通过UI控制后)

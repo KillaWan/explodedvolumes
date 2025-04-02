@@ -766,6 +766,7 @@ void main() {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+
         // 获取视口大小
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (float)width / (float)height;
@@ -865,7 +866,8 @@ void main() {
         const Mesh &mesh,
         float &isoLevel,
         float &tempIsoLevel,
-        const VolumeData &volumeData)
+        const VolumeData &volumeData,
+        unsigned int axisVAO)
     {
         // 开始ImGui帧
         ImGui_ImplOpenGL3_NewFrame();
@@ -1012,6 +1014,26 @@ void main() {
         // 渲染ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        if (showExplosionAxis)
+        {
+            unsigned int axisShader = createLineShaderProgram();
+            glUseProgram(axisShader);
+
+            // 传递矩阵和渲染轴线的代码
+            int axisModelLoc = glGetUniformLocation(axisShader, "model");
+            int axisViewLoc = glGetUniformLocation(axisShader, "view");
+            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+            glLineWidth(20.0f);
+
+            glBindVertexArray(axisVAO);
+            glDrawArrays(GL_LINES, 0, 2);
+            glBindVertexArray(0);
+        }
     }
 
     // 设置ImGui
