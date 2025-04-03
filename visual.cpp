@@ -36,6 +36,8 @@ namespace MC
     float g_isoLevelPercent = 10.0f; // 默认为50%
     float g_tempIsoLevelPercent = 10.0f;
     float tempExplosionPercent = g_explosionDistancePercent; // 添加这个全局变量
+    static bool panelFirstTime = true;
+
     //---------------------- 着色器源代码 ----------------------
 
     const char *vertexShaderSource = R"glsl(
@@ -388,8 +390,10 @@ void main() {
         float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f; // 在第一个面板下方
 
         // 设置窗口位置和大小
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, 0));
+        if(panelFirstTime) {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, 0));    
+        }
 
         if (ImGui::Begin("Explosion Axis Settings"))
         {
@@ -508,7 +512,7 @@ void main() {
             ImGui::Text("Strategy Selection");
 
             // 创建下拉选择框
-            if (ImGui::Combo("Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
+            if (ImGui::Combo("##Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
             {
                 // 用户选择了新的策略，仅更新UI显示，不立即应用
                 currentStrategy = strategies[currentIndex];
@@ -566,7 +570,6 @@ void main() {
             // (其他策略分支保持不变)
 
             // 在所有策略分支之后添加轴线可见性控制
-            ImGui::Separator();
             ImGui::Text("Explosion Axis Visibility");
 
             ImGui::Checkbox("Show Explosion Axis", &showExplosionAxis);
@@ -706,9 +709,11 @@ void main() {
         float panel3Height = viewportSize.y * 0.2f;
 
         // 面板1：主控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
-        ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        if (panelFirstTime) {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
+        }
+        ImGui::Begin("Marching Cubes Control", nullptr);
 
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
 
@@ -732,14 +737,18 @@ void main() {
         ImGui::End(); // 结束主控制面板
 
         // 面板2：爆炸轴设置
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
+        if (panelFirstTime) {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
+        }
         renderExplosionAxisGUI(currentExplosionStrategy);
 
         // 面板3：爆炸视图控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
-        ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        if (panelFirstTime) {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
+        }
+        ImGui::Begin("Explosion View Control", nullptr);
 
         // 添加爆炸视图控制
         if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
@@ -757,11 +766,12 @@ void main() {
             tempExplosionPercent = g_explosionDistancePercent;
             firstRun = false;
         }
-
+        ImGui::Text("Explosion Distance");
         if (showIntersections)
         {
             // 滑块控制临时值
-            if (ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
+            if (ImGui::SliderFloat("##Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
+
             {
                 // 不立即应用，等用户点击按钮确认
             }
@@ -889,6 +899,7 @@ void main() {
             glBindVertexArray(0);
         }
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        panelFirstTime = false;
     }
     void renderExplodedView(
         GLFWwindow *window,
@@ -921,7 +932,8 @@ void main() {
         // 面板1：主控制
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
-        ImGui::Begin("Marching Cubes Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        
+        ImGui::Begin("Marching Cubes Control", nullptr);
 
         ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
         if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
@@ -946,7 +958,7 @@ void main() {
         // 面板3：爆炸视图控制
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
-        ImGui::Begin("Explosion View Control", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::Begin("Explosion View Control", nullptr);
 
         // 添加爆炸视图控制
         if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
