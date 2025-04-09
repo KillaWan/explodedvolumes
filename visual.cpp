@@ -982,7 +982,7 @@ void main() {
         // 视口大小
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        float aspect = (float)width / (float)height;
+        float aspect = (height != 0) ? (float)width / height : 1.0f;
 
         // 构建变换矩阵
         glm::mat4 model(1.0f);
