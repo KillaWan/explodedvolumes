@@ -86,7 +86,6 @@ void recalculateExplosionAxisAndView(
     MC::ExplodedView &explodedView,
     float &lastExplosionDistance)
 {
-    // 检查策略是否变化
     if (lastStrategy != currentExplosionStrategy)
     {
         std::cout << "Strategy changed from " << lastStrategy
@@ -94,65 +93,46 @@ void recalculateExplosionAxisAndView(
         lastStrategy = currentExplosionStrategy;
     }
 
-    // 保存当前爆炸距离和状态
     float currentExplosionDistance = explodedView.explosionDistance;
     bool wasEnabled = explodedView.enabled;
     
-    // 完全清理之前的资源
     MC::cleanupExplodedView(explodedView);
-    
-    // 重新计算爆炸轴
     explosionAxis = MC::computeExplosionAxis(mesh.vertices);
     std::cout << "Updated explosion axis: ("
               << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
     
-    // 规范化爆炸轴（确保是单位向量）
     float length = std::sqrt(
         explosionAxis.x * explosionAxis.x +
         explosionAxis.y * explosionAxis.y +
         explosionAxis.z * explosionAxis.z);
-    
     if (length > 0.0001f) {
         explosionAxis.x /= length;
         explosionAxis.y /= length;
         explosionAxis.z /= length;
     }
 
-    // 更新轴线可视化
     float halfLength = mesh.max_dimension * 2.0f;
     axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
     axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
     axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
-
     axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
     axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
     axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
 
-    // 更新轴线VBO
     MC::Vertex axisLine[2] = {axisStart, axisEnd};
     glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
 
-    // 重新生成切割平面 - 明确指定切割数量和使用新的爆炸轴
     cuttingPlanes = MC::generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3); // 3个切割平面
-
-    // 重新计算爆炸视图
     explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis, MC::g_explosionDistance);
-
-    // 恢复之前的爆炸设置
     explodedView.enabled = wasEnabled;
     explodedView.explosionDistance = currentExplosionDistance;
-    
-    // 更新爆炸视图位移
     MC::updateExplodedViewDisplacements(explodedView, explosionAxis, currentExplosionDistance);
-
-    // 为爆炸视图中的每个片段设置VAO/VBO/EBO
     for (auto &segment : explodedView.segments)
     {
         MC::setupSegmentMesh(segment);
     }
 
-    // 更新记录的爆炸距离
     lastExplosionDistance = currentExplosionDistance;
 }
 

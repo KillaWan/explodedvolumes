@@ -5,37 +5,36 @@
 #include "vector_ops.h"
 #include <vector>
 
-namespace MC {
+namespace MC
+{
 
-// Simple PCL-based rotational symmetry detector
-class SimplePCLRotationalSymmetryDetector : public RotationalSymmetryDetector {
-public:
-    SimplePCLRotationalSymmetryDetector();
-    ~SimplePCLRotationalSymmetryDetector() = default;
-    
-    void setSampleCount(int count) { m_sampleCount = count; }
-    void setSymmetryOrder(int order) { m_symmetryOrder = order; }
-    void useCustomAxis(bool use) { m_useCustomAxis = use; }
-    void setCustomAxis(const Vec3& axis) { m_customAxis = axis; }
-    
-    // Detect rotational symmetry using PCL's PCA
-    bool detect(const std::vector<Vertex>& meshVertices, 
-                Vec3& outRotationAxis, 
-                int& outSymmetryOrder) override;
-                
-    std::string getName() const override { return "Simple PCL Rotational Detector"; }
+    class SimplePCLRotationalSymmetryDetector : public RotationalSymmetryDetector
+    {
+    public:
+        SimplePCLRotationalSymmetryDetector();
+        ~SimplePCLRotationalSymmetryDetector() = default;
 
-private:
-    int m_sampleCount = 100;
-    int m_symmetryOrder = 4;
-    bool m_useCustomAxis = false;
-    Vec3 m_customAxis = {0.0f, 0.0f, 1.0f};
-    // Helper methods
-    bool checkSymmetryAlong(const std::vector<Vertex>& meshVertices, 
-                          const Vec3& axis, 
-                          int& symmetryOrder);
-};
+        void setSampleCount(int count) { m_sampleCount = count; }
+        void setSymmetryOrder(int order) { m_symmetryOrder = order; }
+        void useCustomAxis(bool use) { m_useCustomAxis = use; }
+        void setCustomAxis(const Vec3 &axis) { m_customAxis = axis; }
 
-} // namespace MC
+        bool detect(const std::vector<Vertex> &meshVertices,
+                    Vec3 &outRotationAxis,
+                    int &outSymmetryOrder) override;
+
+        std::string getName() const override { return "Simple PCL Rotational Detector"; }
+
+    private:
+        int m_sampleCount = 100;
+        int m_symmetryOrder = 4;
+        bool m_useCustomAxis = false;
+        Vec3 m_customAxis = {0.0f, 0.0f, 1.0f};
+        bool checkSymmetryAlong(const std::vector<Vertex> &meshVertices,
+                                const Vec3 &axis,
+                                int &symmetryOrder);
+    };
+
+}
 
 #endif // MC_SIMPLE_PCL_ROTATIONAL_SYMMETRY_DETECTOR_H
