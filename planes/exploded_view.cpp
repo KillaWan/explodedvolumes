@@ -5,6 +5,9 @@
 #include <unordered_set>
 #include <cmath>
 #include <glad/glad.h>
+#ifdef _WIN32
+#include <array>
+#endif
 
 namespace MC
 {
