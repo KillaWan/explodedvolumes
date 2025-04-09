@@ -22,23 +22,24 @@
 namespace MC
 {
 
-    // global variables
+    // 全局变量
     Camera camera;
     bool firstMouse = true;
     float lastX, lastY;
-    bool showIntersections = false; // control exploded view display
+    bool showIntersections = false; // 控制爆炸视图的显示
     bool showErrorPopup = false;
     std::string errorPopupMessage = "";
     std::string errorPopupTitle = "Error";
     float g_explosionDistancePercent = 87.5f;
     float g_explosionDistance = 35.0f;
     bool showExplosionAxis = false;
-    float g_isoLevelPercent = 10.0f; // default 50%
+    float g_isoLevelPercent = 10.0f; // 默认为50%
     float g_tempIsoLevelPercent = 10.0f;
-    float tempExplosionPercent = g_explosionDistancePercent;
+    float tempExplosionPercent = g_explosionDistancePercent; // 添加这个全局变量
     static bool panelFirstTime = true;
 
-    // vertex shader source for mesh rendering
+    //---------------------- 着色器源代码 ----------------------
+
     const char *vertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -46,6 +47,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// Calculate normal using derivatives
 out vec3 FragPos;
 
 void main()
@@ -55,7 +57,6 @@ void main()
 }
 )glsl";
 
-    // fragment shader source for basic lighting
     const char *fragmentShaderSource = R"glsl(
 #version 330 core
 out vec4 FragColor;
@@ -63,7 +64,10 @@ in vec3 FragPos;
 
 void main()
 {
+    // Calculate normal using derivative functions
     vec3 normal = normalize(cross(dFdx(FragPos), dFdy(FragPos)));
+    
+    // Basic lighting
     vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
     float diff = max(dot(normal, lightDir), 0.0);
     vec3 diffuse = diff * vec3(0.8, 0.8, 0.8);
@@ -73,7 +77,7 @@ void main()
 }
 )glsl";
 
-    // line shader for symmetry axis visualization
+    // Line shader for symmetry axis visualization
     const char *lineVertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -95,13 +99,13 @@ void main() {
 }
 )glsl";
 
-    // imgui style
+    // 设置ImGui的样式为白色主题
     void setupImGuiStyle()
     {
         ImGuiStyle &style = ImGui::GetStyle();
         ImVec4 *colors = style.Colors;
 
-        // configure colors and style
+        // 设置UI颜色为白色背景和黑色文字
         colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
         colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
         colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
@@ -121,12 +125,14 @@ void main() {
         colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);        // 灰色分隔符
         colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);          // 白色弹出背景
 
+        // 调整填充和间距以获得更整洁的外观
         style.WindowPadding = ImVec2(12.0f, 12.0f);
         style.FramePadding = ImVec2(6.0f, 4.0f);
         style.ItemSpacing = ImVec2(8.0f, 6.0f);
         style.ItemInnerSpacing = ImVec2(6.0f, 6.0f);
         style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
 
+        // 圆角以获得更现代的外观
         style.WindowRounding = 4.0f;
         style.FrameRounding = 3.0f;
         style.PopupRounding = 4.0f;
@@ -134,50 +140,56 @@ void main() {
         style.GrabRounding = 3.0f;
         style.TabRounding = 4.0f;
 
+        // 窗口标题对齐
         style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
     }
 
-    // calculate viewport size
+    // 计算视口大小以适应面板
     void calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight)
     {
-        // window size
+        // 获取窗口大小
         int windowWidth, windowHeight;
         glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 
-        // panel width and padding
+        // 面板宽度（固定）
         float panelWidth = 300.0f;
         float padding = 10.0f;
 
-        // viewport size
+        // 计算视口大小（窗口大小减去面板区域）
         viewportX = 0;
         viewportY = 0;
         viewportWidth = windowWidth - panelWidth - padding * 2;
         viewportHeight = windowHeight;
 
-        // ensure valid viewport dimensions
+        // 确保我们有有效的视口尺寸
         if (viewportWidth < 1)
             viewportWidth = 1;
         if (viewportHeight < 1)
             viewportHeight = 1;
     }
 
-    //  apply calculated viewport to OpenGL
+    // 将计算的视口应用于OpenGL
     void updateViewport(GLFWwindow *window)
     {
         int viewportX, viewportY, viewportWidth, viewportHeight;
         calculateViewport(window, viewportX, viewportY, viewportWidth, viewportHeight);
+
+        // 设置OpenGL视口
         glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
     }
 
-    // window resize callback
+    //---------------------- 回调函数实现 ----------------------
+
+    // Window size change callback
     void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     {
         updateViewport(window);
     }
 
-    // mouse callback function
+    // Mouse callback function
     void mouse_callback(GLFWwindow *window, double xpos, double ypos)
     {
+        // 检查ImGui是否需要鼠标
         ImGuiIO &io = ImGui::GetIO();
         if (io.WantCaptureMouse)
         {
@@ -192,16 +204,17 @@ void main() {
             return;
         }
 
+        // 只在按下左键时旋转
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
         {
             float xoffset = xpos - lastX;
-            float yoffset = lastY - ypos;
+            float yoffset = lastY - ypos; // 反转
 
             const float sensitivity = 0.1f;
             camera.rotationY += xoffset * sensitivity;
             camera.rotationX += yoffset * sensitivity;
 
-            // limit pitch angle
+            // 限制俯仰角
             if (camera.rotationX > 89.0f)
                 camera.rotationX = 89.0f;
             if (camera.rotationX < -89.0f)
@@ -212,11 +225,17 @@ void main() {
         lastY = ypos;
     }
 
-    // scroll callback for zooming
+    // Scroll callback for zooming
     void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
     {
         std::cout << "Scroll event: yoffset = " << yoffset << std::endl;
-        camera.zoom -= yoffset * 0.2f;
+        camera.zoom -= yoffset * 0.2f; // 增加灵敏度
+
+        // // 限制缩放范围
+        // if (camera.zoom < 0.1f)
+        //     camera.zoom = 0.1f;
+        // if (camera.zoom > 6.0f)
+        //     camera.zoom = 6.0f;
     }
 
     // Key callback for additional controls
@@ -227,7 +246,7 @@ void main() {
             glfwSetWindowShouldClose(window, true);
         }
 
-        // adjust camera distance with + and - keys
+        // 使用 + 和 - 键调整相机距离
         if (key == GLFW_KEY_EQUAL && (action == GLFW_PRESS || action == GLFW_REPEAT))
         {
             camera.distance *= 0.9f; // 拉近
@@ -236,9 +255,14 @@ void main() {
         {
             camera.distance *= 1.1f; // 拉远
         }
+
+        // 不再使用I键切换交线显示，改为完全通过UI控制
+        // 保留此处以便以后可以添加其他键盘快捷键
     }
 
-    // compile individual shader
+    //---------------------- 着色器函数 ----------------------
+
+    // 编译着色器
     unsigned int compileShader(unsigned int type, const char *src)
     {
         unsigned int shader = glCreateShader(type);
@@ -256,7 +280,7 @@ void main() {
         return shader;
     }
 
-    // create shader program for mesh rendering
+    // 创建着色器程序
     unsigned int createShaderProgram()
     {
         unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
@@ -282,7 +306,7 @@ void main() {
         return shaderProgram;
     }
 
-    // create shader program for line rendering
+    // Create shader program for line rendering
     unsigned int createLineShaderProgram()
     {
         unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, lineVertexShaderSource);
@@ -308,9 +332,9 @@ void main() {
         return shaderProgram;
     }
 
-    //---------------------- OpenGL ----------------------
+    //---------------------- OpenGL函数 ----------------------
 
-    // set mesh VAO/VBO/EBO
+    // 设置网格的VAO/VBO/EBO
     void setupMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO)
     {
         glGenVertexArrays(1, &VAO);
@@ -333,7 +357,7 @@ void main() {
         glBindVertexArray(0);
     }
 
-    // update mesh
+    // 更新网格数据
     void updateMesh(const Mesh &mesh, unsigned int &VAO, unsigned int &VBO, unsigned int &EBO)
     {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -347,6 +371,7 @@ void main() {
 
     void renderExplosionAxisGUI(std::string &currentStrategy)
     {
+        // 不修改函数的逻辑，只修改UI样式
         ImGuiStyle &style = ImGui::GetStyle();
         style.Colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
         style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
@@ -357,12 +382,14 @@ void main() {
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
         style.Colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
 
+        // 用于垂直排列面板的参数
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
         float panelWidth = 300.0f;
         float spacing = 10.0f;
         float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f; // 在第一个面板下方
 
+        // 设置窗口位置和大小
         if(panelFirstTime) {
             ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
             ImGui::SetNextWindowSize(ImVec2(panelWidth, 0));    
@@ -370,21 +397,29 @@ void main() {
 
         if (ImGui::Begin("Explosion Axis Settings"))
         {
+            // 获取当前配置
             MC::ExplosionAxisConfig &config = MC::getExplosionAxisConfig();
+
+            // 获取当前使用的内部策略名称
             std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
+
+            // 将内部策略名称转换为UI友好名称
             if (currentStrategy.empty())
             {
                 currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
             }
 
+            // 获取可用的UI友好策略名称
             std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
 
+            // 创建策略名称的字符数组，用于ImGui::Combo
             std::vector<const char *> strategyNames;
             for (const auto &strategy : strategies)
             {
                 strategyNames.push_back(strategy.c_str());
             }
 
+            // 找到当前策略在列表中的索引
             int currentIndex = 0;
             for (size_t i = 0; i < strategies.size(); ++i)
             {
@@ -395,7 +430,10 @@ void main() {
                 }
             }
 
+            // 存储选择前的策略
             static std::string previousStrategy = currentStrategy;
+
+            // 添加自定义爆炸轴控制（在策略选择之前显示）
             ImGui::Text("Custom Explosion Axis");
 
             if (ImGui::Checkbox("Use Custom Axis", &config.useCustomExplosionAxis))
@@ -772,7 +810,7 @@ void main() {
 
         // 获取视口大小
         glfwGetFramebufferSize(window, &width, &height);
-        float aspect = (float)width / (float)height;
+        float aspect = (height != 0) ? (float)width / height : 1.0f;
 
         // 使用着色器
         glUseProgram(shaderProgram);
