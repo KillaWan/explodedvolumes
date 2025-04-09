@@ -1,297 +1,415 @@
 #include "planes/exploded_view.h"
-#include "data.h"
-
-// VTK头文件
-#include <vtkSmartPointer.h>
-#include <vtkPolyData.h>
-#include <vtkPoints.h>
-#include <vtkCellArray.h>
-#include <vtkPlane.h>
-#include <vtkCutter.h>
-#include <vtkTransform.h>
-#include <vtkTransformPolyDataFilter.h>
-#include <vtkClipPolyData.h>
-
-// 在 exploded_view.cpp 头部添加
+#include <algorithm>
+#include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <cmath>
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <vtkCell.h>
-#include <vtkCellType.h>
 
 namespace MC
 {
-
-    // 将Mesh转换为VTK格式
-    vtkSmartPointer<vtkPolyData> convertMeshToVTKPolyData(const Mesh &mesh)
+    // 顶点哈希结构 - 用于快速查找顶点
+    struct VertexHash
     {
-        vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-        for (const auto &vertex : mesh.vertices)
+        float epsilon;
+
+        VertexHash(float e = 1e-5f) : epsilon(e) {}
+
+        size_t operator()(const Vertex &v) const
         {
-            points->InsertNextPoint(vertex.x, vertex.y, vertex.z);
+            // 将坐标量化以减少浮点误差影响
+            int x = static_cast<int>(v.x / epsilon);
+            int y = static_cast<int>(v.y / epsilon);
+            int z = static_cast<int>(v.z / epsilon);
+
+            // 使用空间哈希函数组合坐标
+            // 这些质数有助于减少哈希冲突
+            return static_cast<size_t>(x * 73856093 ^ y * 19349663 ^ z * 83492791);
+        }
+    };
+
+    // 顶点近似相等判断
+    struct VertexEqual
+    {
+        float epsilon;
+
+        VertexEqual(float e = 1e-5f) : epsilon(e) {}
+
+        bool operator()(const Vertex &v1, const Vertex &v2) const
+        {
+            return std::abs(v1.x - v2.x) < epsilon &&
+                   std::abs(v1.y - v2.y) < epsilon &&
+                   std::abs(v1.z - v2.z) < epsilon;
+        }
+    };
+
+    // 将三角形分配到相应的段 - 使用空间哈希表优化
+    void assignTriangleToSegment(
+        const Vertex &v0, const Vertex &v1, const Vertex &v2,
+        int segmentIndex,
+        std::vector<ExplodedSegment> &segments,
+        std::vector<std::unordered_map<Vertex, size_t, VertexHash, VertexEqual>> &vertexMaps)
+    {
+        ExplodedSegment &segment = segments[segmentIndex];
+        auto &vertexMap = vertexMaps[segmentIndex];
+        std::array<size_t, 3> newIndices;
+
+        for (int i = 0; i < 3; i++)
+        {
+            const Vertex &v = (i == 0) ? v0 : ((i == 1) ? v1 : v2);
+
+            // 使用哈希表查找顶点，时间复杂度O(1)
+            auto it = vertexMap.find(v);
+            if (it != vertexMap.end())
+            {
+                // 使用现有顶点
+                newIndices[i] = it->second;
+            }
+            else
+            {
+                // 添加新顶点
+                newIndices[i] = segment.vertices.size();
+                segment.vertices.push_back(v);
+                vertexMap[v] = newIndices[i];
+            }
         }
 
-        vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
-        for (size_t i = 0; i < mesh.indices.size(); i += 3)
-        {
-            vtkIdType pointIds[3] = {
-                mesh.indices[i],
-                mesh.indices[i + 1],
-                mesh.indices[i + 2]};
-            cells->InsertNextCell(3, pointIds);
-        }
-
-        vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-        polyData->SetPoints(points);
-        polyData->SetPolys(cells);
-
-        return polyData;
+        segment.indices.push_back(newIndices[0]);
+        segment.indices.push_back(newIndices[1]);
+        segment.indices.push_back(newIndices[2]);
     }
 
-    // 使用VTK进行切割的新实现
+    // 计算段的中心点
+    Vec3 computeSegmentCenter(const ExplodedSegment &segment)
+    {
+        if (segment.vertices.empty())
+        {
+            return Vec3(0, 0, 0);
+        }
+
+        Vec3 center(0, 0, 0);
+        for (const auto &v : segment.vertices)
+        {
+            center.x += v.x;
+            center.y += v.y;
+            center.z += v.z;
+        }
+
+        float count = static_cast<float>(segment.vertices.size());
+        center.x /= count;
+        center.y /= count;
+        center.z /= count;
+
+        return center;
+    }
+
+    // 优化的计算爆炸视图函数 - 一体化处理
     ExplodedView computeExplodedView(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
         const Vec3 &explosionAxis,
         float explosionDistance)
     {
-        ExplodedView explodedView;
-        explodedView.explosionDistance = explosionDistance;
-        float segmentGap = explodedView.explosionDistance;
+        ExplodedView result;
+        result.explosionDistance = explosionDistance; // 存储爆炸距离
 
-        // 片段间的间距
-        float segmentSpacing = segmentGap;
+        // 计时开始
+        auto startTime = std::chrono::high_resolution_clock::now();
 
-        // 将原始网格转换为VTK格式
-        vtkSmartPointer<vtkPolyData> originalPolyData = convertMeshToVTKPolyData(mesh);
-
-        // 没有切割平面时，只返回原始模型
+        // 如果没有切割平面，则整个模型作为一个片段
         if (planes.empty())
         {
             ExplodedSegment segment;
-            segment.vtkPolyData = originalPolyData;
-
-            // 复制顶点和索引
-            for (const auto &vertex : mesh.vertices)
-            {
-                segment.vertices.push_back(vertex);
-            }
+            segment.vertices = mesh.vertices;
             segment.indices = mesh.indices;
+            segment.center = mesh.center;
+            segment.displacement = Vec3(0, 0, 0);
 
-            // 无位移
-            segment.displacement = {0.0f, 0.0f, 0.0f};
-            setupSegmentMesh(segment);
-            explodedView.segments.push_back(segment);
-
-            return explodedView;
-        }
-
-        // 使用二叉树思路来进行切割
-        std::vector<vtkSmartPointer<vtkPolyData>> segmentList;
-        segmentList.push_back(originalPolyData);
-
-        // 对每个切割平面
-        for (const CuttingPlane &plane : planes)
-        {
-            // 获取当前所有片段，准备进一步切割
-            std::vector<vtkSmartPointer<vtkPolyData>> currentSegments = segmentList;
-            segmentList.clear(); // 清空列表准备存储新切割的片段
-
-            // 创建VTK平面
-            vtkSmartPointer<vtkPlane> vtkClippingPlane = vtkSmartPointer<vtkPlane>::New();
-            vtkClippingPlane->SetOrigin(plane.origin.x, plane.origin.y, plane.origin.z);
-            vtkClippingPlane->SetNormal(plane.normal.x, plane.normal.y, plane.normal.z);
-
-            // 对当前每个片段进行切割
-            for (auto segment : currentSegments)
-            {
-                // 正面切割
-                vtkSmartPointer<vtkClipPolyData> clipperPositive = vtkSmartPointer<vtkClipPolyData>::New();
-                clipperPositive->SetInputData(segment);
-                clipperPositive->SetClipFunction(vtkClippingPlane);
-                clipperPositive->InsideOutOff(); // 保留平面正面的部分
-                clipperPositive->Update();
-
-                // 负面切割
-                vtkSmartPointer<vtkClipPolyData> clipperNegative = vtkSmartPointer<vtkClipPolyData>::New();
-                clipperNegative->SetInputData(segment);
-                clipperNegative->SetClipFunction(vtkClippingPlane);
-                clipperNegative->InsideOutOn(); // 保留平面负面的部分
-                clipperNegative->Update();
-
-                // 将两个切割结果添加到片段列表中
-                vtkSmartPointer<vtkPolyData> positiveOutput = clipperPositive->GetOutput();
-                vtkSmartPointer<vtkPolyData> negativeOutput = clipperNegative->GetOutput();
-
-                // 只添加有效的片段（包含面片的片段）
-                if (positiveOutput->GetNumberOfCells() > 0)
-                {
-                    segmentList.push_back(positiveOutput);
-                }
-
-                if (negativeOutput->GetNumberOfCells() > 0)
-                {
-                    segmentList.push_back(negativeOutput);
-                }
-            }
-        }
-
-        // 创建最终的爆炸视图片段
-        int segmentCount = segmentList.size();
-        for (int i = 0; i < segmentCount; i++)
-        {
-            vtkSmartPointer<vtkPolyData> segmentPolyData = segmentList[i];
-            ExplodedSegment explodedSegment;
-            explodedSegment.vtkPolyData = segmentPolyData;
-
-            // 复制顶点
-            for (vtkIdType j = 0; j < segmentPolyData->GetNumberOfPoints(); j++)
-            {
-                double point[3];
-                segmentPolyData->GetPoint(j, point);
-
-                Vertex v;
-                v.x = point[0];
-                v.y = point[1];
-                v.z = point[2];
-                explodedSegment.vertices.push_back(v);
-            }
-
-            // 复制面片索引
-            for (vtkIdType j = 0; j < segmentPolyData->GetNumberOfCells(); j++)
-            {
-                vtkCell *cell = segmentPolyData->GetCell(j);
-
-                // 确认是三角形
-                if (cell->GetCellType() == VTK_TRIANGLE)
-                {
-                    for (int k = 0; k < 3; k++) // 三角形有3个顶点
-                    {
-                        explodedSegment.indices.push_back(cell->GetPointId(k));
-                    }
-                }
-            }
-
-            // 计算位移
-            // 将片段均匀分布在爆炸轴上，并加入间距
-            float normalizedIndex = (segmentCount > 1) ? 2.0f * ((float)i / (segmentCount - 1) - 0.5f) : 0.0f;
-
-            // 添加片段间距：计算相对于中心的索引距离，乘以片段间距
-            int centerIndex = segmentCount / 2;
-            int indexDistance = std::abs(i - centerIndex);
-            float gapDisplacement = indexDistance * segmentSpacing;
-
-            // 总位移 = 标准化分布位移 + 间隔位移（保持符号一致）
-            float displacementFactor = -1.0f * normalizedIndex * explodedView.explosionDistance;
-            if (displacementFactor != 0)
-            {
-                displacementFactor += (displacementFactor > 0 ? gapDisplacement : -gapDisplacement);
-            }
-
-            explodedSegment.displacement.x = explosionAxis.x * displacementFactor;
-            explodedSegment.displacement.y = explosionAxis.y * displacementFactor;
-            explodedSegment.displacement.z = explosionAxis.z * displacementFactor;
+            result.segments.push_back(segment);
 
             // 设置OpenGL缓冲
-            setupSegmentMesh(explodedSegment);
-            explodedView.segments.push_back(explodedSegment);
+            setupSegmentMesh(segment);
+
+            return result;
         }
 
-        return explodedView;
+        // 对切割平面按照在爆炸轴上的位置排序
+        std::vector<std::pair<float, size_t>> sortedPlaneIndices;
+        sortedPlaneIndices.reserve(planes.size());
+
+        for (size_t i = 0; i < planes.size(); i++)
+        {
+            float proj = planes[i].distance;
+            sortedPlaneIndices.emplace_back(proj, i);
+        }
+
+        std::sort(sortedPlaneIndices.begin(), sortedPlaneIndices.end());
+
+        // 初始化片段（n个平面会产生n+1个片段）
+        result.segments.resize(planes.size() + 1);
+
+        // 创建顶点映射数组 - 每个段一个哈希表
+        std::vector<std::unordered_map<Vertex, size_t, VertexHash, VertexEqual>>
+            vertexMaps(planes.size() + 1);
+
+        // 预计算顶点在爆炸轴上的投影，避免重复计算
+        std::vector<float> vertexProjections(mesh.vertices.size());
+
+#pragma omp parallel for
+        for (size_t i = 0; i < mesh.vertices.size(); i++)
+        {
+            vertexProjections[i] = projectVertexOnAxis(mesh.vertices[i], explosionAxis);
+        }
+
+        // 预先为每个片段的顶点和索引容器分配空间
+        for (auto &segment : result.segments)
+        {
+            segment.vertices.reserve(mesh.vertices.size() / result.segments.size() * 2);
+            segment.indices.reserve(mesh.indices.size() / result.segments.size() * 2);
+        }
+
+        // 遍历所有三角形，将其分配到相应的片段
+        for (size_t i = 0; i < mesh.indices.size(); i += 3)
+        {
+            const Vertex &v0 = mesh.vertices[mesh.indices[i]];
+            const Vertex &v1 = mesh.vertices[mesh.indices[i + 1]];
+            const Vertex &v2 = mesh.vertices[mesh.indices[i + 2]];
+
+            // 使用预计算的投影
+            float p0 = vertexProjections[mesh.indices[i]];
+            float p1 = vertexProjections[mesh.indices[i + 1]];
+            float p2 = vertexProjections[mesh.indices[i + 2]];
+
+            // 找到三角形中心在爆炸轴上的投影
+            float centerProj = (p0 + p1 + p2) / 3.0f;
+
+            // 确定该三角形属于哪个片段 - 使用二分查找优化
+            auto it = std::lower_bound(
+                sortedPlaneIndices.begin(),
+                sortedPlaneIndices.end(),
+                std::make_pair(centerProj, static_cast<size_t>(0)));
+
+            int segmentIndex = static_cast<int>(std::distance(sortedPlaneIndices.begin(), it));
+
+            // 分配三角形到相应的片段
+            assignTriangleToSegment(v0, v1, v2, segmentIndex, result.segments, vertexMaps);
+        }
+
+        // 清理不再需要的哈希表，释放内存
+        vertexMaps.clear();
+
+// 计算每个片段的中心点
+#pragma omp parallel for
+        for (size_t i = 0; i < result.segments.size(); i++)
+        {
+            result.segments[i].center = computeSegmentCenter(result.segments[i]);
+        }
+
+        // 直接在此函数中计算位移，而不是调用单独的函数
+        int numSegments = result.segments.size();
+        if (numSegments <= 1)
+        {
+            // 只有一个片段，不需要爆炸
+            if (!result.segments.empty())
+            {
+                result.segments[0].displacement = Vec3(0, 0, 0);
+            }
+        }
+        else
+        {
+            // 确定固定的中心片段
+            int centerSegmentIndex;
+            if (numSegments % 2 == 1)
+            {
+                // 奇数个片段，中间片段固定
+                centerSegmentIndex = numSegments / 2;
+            }
+            else
+            {
+                // 偶数个片段，选择中间两个的第一个固定
+                centerSegmentIndex = numSegments / 2 - 1;
+            }
+
+            // 设置中心片段位移为0
+            result.segments[centerSegmentIndex].displacement = Vec3(0, 0, 0);
+
+// 计算其他片段的位移
+// 向左（爆炸轴负方向）的片段
+#pragma omp parallel for
+            for (int i = 0; i < centerSegmentIndex; i++)
+            {
+                float distance = explosionDistance * (centerSegmentIndex - i);
+                result.segments[i].displacement.x = -explosionAxis.x * distance;
+                result.segments[i].displacement.y = -explosionAxis.y * distance;
+                result.segments[i].displacement.z = -explosionAxis.z * distance;
+            }
+
+// 向右（爆炸轴正方向）的片段
+#pragma omp parallel for
+            for (int i = centerSegmentIndex + 1; i < numSegments; i++)
+            {
+                float distance = explosionDistance * (i - centerSegmentIndex);
+                result.segments[i].displacement.x = explosionAxis.x * distance;
+                result.segments[i].displacement.y = explosionAxis.y * distance;
+                result.segments[i].displacement.z = explosionAxis.z * distance;
+            }
+        }
+
+// 设置每个片段的OpenGL缓冲
+#pragma omp parallel for
+        for (size_t i = 0; i < result.segments.size(); i++)
+        {
+            setupSegmentMesh(result.segments[i]);
+        }
+
+        // 计时结束
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
+        std::cout << "Exploded view computation completed in " << duration
+                  << " ms with " << result.segments.size() << " segments." << std::endl;
+
+        return result;
     }
+
+    // 更新爆炸视图的位移
+    void updateExplodedViewDisplacements(
+        ExplodedView &explodedView,
+        const Vec3 &explosionAxis,
+        float explosionDistance)
+    {
+        explodedView.explosionDistance = explosionDistance;
+        auto &segments = explodedView.segments;
+        int numSegments = segments.size();
+
+        if (numSegments <= 1)
+        {
+            // 只有一个片段，不需要爆炸
+            if (!segments.empty())
+            {
+                segments[0].displacement = Vec3(0, 0, 0);
+            }
+            return;
+        }
+
+        // 确定固定的中心片段
+        int centerSegmentIndex;
+        if (numSegments % 2 == 1)
+        {
+            // 奇数个片段，中间片段固定
+            centerSegmentIndex = numSegments / 2;
+        }
+        else
+        {
+            // 偶数个片段，选择中间两个的第一个固定
+            centerSegmentIndex = numSegments / 2 - 1;
+        }
+
+        // 设置中心片段位移为0
+        segments[centerSegmentIndex].displacement = Vec3(0, 0, 0);
+
+// 计算其他片段的位移 - 并行处理
+#pragma omp parallel sections
+        {
+#pragma omp section
+            {
+                // 向左（爆炸轴负方向）的片段
+                for (int i = centerSegmentIndex - 1; i >= 0; i--)
+                {
+                    float distance = explosionDistance * (centerSegmentIndex - i);
+                    segments[i].displacement.x = -explosionAxis.x * distance;
+                    segments[i].displacement.y = -explosionAxis.y * distance;
+                    segments[i].displacement.z = -explosionAxis.z * distance;
+                }
+            }
+
+#pragma omp section
+            {
+                // 向右（爆炸轴正方向）的片段
+                for (int i = centerSegmentIndex + 1; i < numSegments; i++)
+                {
+                    float distance = explosionDistance * (i - centerSegmentIndex);
+                    segments[i].displacement.x = explosionAxis.x * distance;
+                    segments[i].displacement.y = explosionAxis.y * distance;
+                    segments[i].displacement.z = explosionAxis.z * distance;
+                }
+            }
+        }
+
+// 更新每个片段的OpenGL缓冲 - 并行处理
+#pragma omp parallel for
+        for (size_t i = 0; i < segments.size(); i++)
+        {
+            updateSegmentMesh(segments[i]);
+        }
+    }
+
     // 设置片段的VAO/VBO/EBO
     void setupSegmentMesh(ExplodedSegment &segment)
     {
+        if (segment.vertices.empty() || segment.indices.empty())
+        {
+            return;
+        }
+
         // 如果已经有VAO，先删除
         if (segment.VAO != 0)
         {
             glDeleteVertexArrays(1, &segment.VAO);
             glDeleteBuffers(1, &segment.VBO);
             glDeleteBuffers(1, &segment.EBO);
+            segment.VAO = segment.VBO = segment.EBO = 0;
         }
 
-        // 创建VAO/VBO/EBO
         glGenVertexArrays(1, &segment.VAO);
         glGenBuffers(1, &segment.VBO);
         glGenBuffers(1, &segment.EBO);
 
         glBindVertexArray(segment.VAO);
 
-        // 绑定顶点缓冲
+        // 创建包含位移的顶点数据
+        std::vector<Vertex> displacedVertices = segment.vertices;
+        for (auto &v : displacedVertices)
+        {
+            v.x += segment.displacement.x;
+            v.y += segment.displacement.y;
+            v.z += segment.displacement.z;
+        }
+
         glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
-        glBufferData(GL_ARRAY_BUFFER,
-                     segment.vertices.size() * sizeof(Vertex),
-                     segment.vertices.data(),
-                     GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, displacedVertices.size() * sizeof(Vertex),
+                     displacedVertices.data(), GL_STATIC_DRAW);
 
-        // 绑定索引缓冲
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, segment.EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     segment.indices.size() * sizeof(IndexType),
-                     segment.indices.data(),
-                     GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, segment.indices.size() * sizeof(IndexType),
+                     segment.indices.data(), GL_STATIC_DRAW);
 
-        // 设置顶点属性
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
         glEnableVertexAttribArray(0);
 
         glBindVertexArray(0);
     }
 
-    // 更新爆炸视图位移
-    void MC::updateExplodedViewDisplacements(
-        ExplodedView &explodedView,
-        const Vec3 &explosionAxis,
-        float explosionDistance)
+    // 更新片段的网格数据
+    void updateSegmentMesh(ExplodedSegment &segment)
     {
-        // 保存爆炸距离设置
-        explodedView.explosionDistance = explosionDistance;
-        int segmentCount = explodedView.segments.size();
-        
-        if (segmentCount <= 1) {
-            return; // 没有片段或只有一个片段，不需要爆炸
+        if (segment.vertices.empty() || segment.indices.empty() || segment.VAO == 0)
+        {
+            return;
         }
-        
-        // 确保爆炸轴是单位向量
-        Vec3 normalizedAxis = explosionAxis;
-        float length = std::sqrt(
-            normalizedAxis.x * normalizedAxis.x +
-            normalizedAxis.y * normalizedAxis.y +
-            normalizedAxis.z * normalizedAxis.z);
-            
-        if (length > 0.0001f) {
-            normalizedAxis.x /= length;
-            normalizedAxis.y /= length;
-            normalizedAxis.z /= length;
+
+        // 应用位移到顶点
+        std::vector<Vertex> displacedVertices = segment.vertices;
+        for (auto &v : displacedVertices)
+        {
+            v.x += segment.displacement.x;
+            v.y += segment.displacement.y;
+            v.z += segment.displacement.z;
         }
-        
-        // 这里使用与原始computeExplodedView中完全相同的计算逻辑
-        float segmentSpacing = explosionDistance;
-        
-        for (int i = 0; i < segmentCount; i++) {
-            auto &segment = explodedView.segments[i];
-            
-            // 复制原始computeExplodedView中相同的位移计算逻辑:
-            // 1. 计算标准化索引 (-0.5到0.5的范围)
-            float normalizedIndex = (segmentCount > 1) ? 2.0f * ((float)i / (segmentCount - 1) - 0.5f) : 0.0f;
-            
-            // 2. 计算相对于中心的索引距离
-            int centerIndex = segmentCount / 2;
-            int indexDistance = std::abs(i - centerIndex);
-            
-            // 3. 基于间距计算额外偏移
-            float gapDisplacement = indexDistance * segmentSpacing;
-            
-            // 4. 总位移 = 标准化分布位移 + 间隔位移（保持符号一致）
-            float displacementFactor = -1.0f * normalizedIndex * explosionDistance;
-            if (displacementFactor != 0) {
-                displacementFactor += (displacementFactor > 0 ? gapDisplacement : -gapDisplacement);
-            }
-            
-            // 应用位移
-            segment.displacement.x = normalizedAxis.x * displacementFactor;
-            segment.displacement.y = normalizedAxis.y * displacementFactor;
-            segment.displacement.z = normalizedAxis.z * displacementFactor;
-        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
+        glBufferData(GL_ARRAY_BUFFER, displacedVertices.size() * sizeof(Vertex),
+                     displacedVertices.data(), GL_STATIC_DRAW);
     }
 
     // 清理爆炸视图资源
@@ -302,15 +420,371 @@ namespace MC
             if (segment.VAO != 0)
             {
                 glDeleteVertexArrays(1, &segment.VAO);
-                glDeleteBuffers(1, &segment.VBO);
-                glDeleteBuffers(1, &segment.EBO);
-
                 segment.VAO = 0;
+            }
+            if (segment.VBO != 0)
+            {
+                glDeleteBuffers(1, &segment.VBO);
                 segment.VBO = 0;
+            }
+            if (segment.EBO != 0)
+            {
+                glDeleteBuffers(1, &segment.EBO);
                 segment.EBO = 0;
             }
         }
+
         explodedView.segments.clear();
     }
 
 } // namespace MC
+// #include "planes/exploded_view.h"
+// #include <algorithm>
+// #include <iostream>
+// #include <unordered_map>
+// #include <unordered_set>
+// #include <cmath>
+// #include <glad/glad.h>
+
+// namespace MC
+// {
+//     // 比较两个顶点是否近似相等
+//     bool verticesEqual(const Vertex &v1, const Vertex &v2, float epsilon = 1e-5f)
+//     {
+//         return std::abs(v1.x - v2.x) < epsilon &&
+//                std::abs(v1.y - v2.y) < epsilon &&
+//                std::abs(v1.z - v2.z) < epsilon;
+//     }
+
+//     // 将三角形分配到相应的段
+//     void assignTriangleToSegment(
+//         const Vertex &v0, const Vertex &v1, const Vertex &v2,
+//         int segmentIndex,
+//         std::vector<ExplodedSegment> &segments,
+//         std::unordered_map<int, std::unordered_map<size_t, size_t>> &vertexMaps)
+//     {
+//         ExplodedSegment &segment = segments[segmentIndex];
+//         auto &vertexMap = vertexMaps[segmentIndex];
+//         std::array<size_t, 3> newIndices;
+
+//         for (int i = 0; i < 3; i++)
+//         {
+//             const Vertex &v = (i == 0) ? v0 : ((i == 1) ? v1 : v2);
+//             bool found = false;
+//             size_t existingIndex = 0;
+
+//             for (size_t j = 0; j < segment.vertices.size(); j++)
+//             {
+//                 if (verticesEqual(segment.vertices[j], v))
+//                 {
+//                     found = true;
+//                     existingIndex = j;
+//                     break;
+//                 }
+//             }
+
+//             if (found)
+//             {
+//                 newIndices[i] = existingIndex;
+//             }
+//             else
+//             {
+//                 newIndices[i] = segment.vertices.size();
+//                 segment.vertices.push_back(v);
+//             }
+//         }
+
+//         segment.indices.push_back(newIndices[0]);
+//         segment.indices.push_back(newIndices[1]);
+//         segment.indices.push_back(newIndices[2]);
+//     }
+
+//     // 计算段的中心点
+//     Vec3 computeSegmentCenter(const ExplodedSegment &segment)
+//     {
+//         if (segment.vertices.empty())
+//         {
+//             return Vec3(0, 0, 0);
+//         }
+
+//         Vec3 center(0, 0, 0);
+//         for (const auto &v : segment.vertices)
+//         {
+//             center.x += v.x;
+//             center.y += v.y;
+//             center.z += v.z;
+//         }
+
+//         float count = static_cast<float>(segment.vertices.size());
+//         center.x /= count;
+//         center.y /= count;
+//         center.z /= count;
+
+//         return center;
+//     }
+
+//     // 修改后的计算爆炸视图函数 - 一体化处理
+//     ExplodedView computeExplodedView(
+//         const Mesh &mesh,
+//         const std::vector<CuttingPlane> &planes,
+//         const Vec3 &explosionAxis,
+//         float explosionDistance) // 添加默认值参数
+//     {
+//         ExplodedView result;
+//         result.explosionDistance = explosionDistance; // 存储爆炸距离
+
+//         // 如果没有切割平面，则整个模型作为一个片段
+//         if (planes.empty())
+//         {
+//             ExplodedSegment segment;
+//             segment.vertices = mesh.vertices;
+//             segment.indices = mesh.indices;
+//             segment.center = mesh.center;
+//             segment.displacement = Vec3(0, 0, 0);
+
+//             result.segments.push_back(segment);
+//             return result;
+//         }
+
+//         // 对切割平面按照在爆炸轴上的位置排序
+//         std::vector<std::pair<float, size_t>> sortedPlaneIndices;
+//         for (size_t i = 0; i < planes.size(); i++)
+//         {
+//             float proj = planes[i].distance;
+//             sortedPlaneIndices.push_back({proj, i});
+//         }
+
+//         std::sort(sortedPlaneIndices.begin(), sortedPlaneIndices.end());
+
+//         // 初始化片段（n个平面会产生n+1个片段）
+//         result.segments.resize(planes.size() + 1);
+//         std::unordered_map<int, std::unordered_map<size_t, size_t>> vertexMaps;
+
+//         // 遍历所有三角形，将其分配到相应的片段
+//         for (size_t i = 0; i < mesh.indices.size(); i += 3)
+//         {
+//             const Vertex &v0 = mesh.vertices[mesh.indices[i]];
+//             const Vertex &v1 = mesh.vertices[mesh.indices[i + 1]];
+//             const Vertex &v2 = mesh.vertices[mesh.indices[i + 2]];
+
+//             // 计算三角形三个顶点在爆炸轴上的投影
+//             float p0 = projectVertexOnAxis(v0, explosionAxis);
+//             float p1 = projectVertexOnAxis(v1, explosionAxis);
+//             float p2 = projectVertexOnAxis(v2, explosionAxis);
+
+//             // 找到三角形中心在爆炸轴上的投影
+//             float centerProj = (p0 + p1 + p2) / 3.0f;
+
+//             // 确定该三角形属于哪个片段
+//             int segmentIndex = 0;
+//             while (segmentIndex < sortedPlaneIndices.size() &&
+//                    centerProj > planes[sortedPlaneIndices[segmentIndex].second].distance)
+//             {
+//                 segmentIndex++;
+//             }
+
+//             // 分配三角形到相应的片段
+//             assignTriangleToSegment(v0, v1, v2, segmentIndex, result.segments, vertexMaps);
+//         }
+
+//         // 计算每个片段的中心点
+//         for (auto &segment : result.segments)
+//         {
+//             segment.center = computeSegmentCenter(segment);
+//         }
+
+//         // 直接在此函数中计算位移，而不是调用单独的函数
+//         int numSegments = result.segments.size();
+//         if (numSegments <= 1)
+//         {
+//             // 只有一个片段，不需要爆炸
+//             if (!result.segments.empty())
+//             {
+//                 result.segments[0].displacement = Vec3(0, 0, 0);
+//             }
+//         }
+//         else
+//         {
+//             // 确定固定的中心片段
+//             int centerSegmentIndex;
+//             if (numSegments % 2 == 1)
+//             {
+//                 // 奇数个片段，中间片段固定
+//                 centerSegmentIndex = numSegments / 2;
+//             }
+//             else
+//             {
+//                 // 偶数个片段，选择中间两个的第一个固定
+//                 centerSegmentIndex = numSegments / 2 - 1;
+//             }
+
+//             // 设置中心片段位移为0
+//             result.segments[centerSegmentIndex].displacement = Vec3(0, 0, 0);
+
+//             // 计算其他片段的位移
+//             // 向左（爆炸轴负方向）的片段
+//             for (int i = centerSegmentIndex - 1; i >= 0; i--)
+//             {
+//                 float distance = explosionDistance * (centerSegmentIndex - i);
+//                 result.segments[i].displacement.x = -explosionAxis.x * distance;
+//                 result.segments[i].displacement.y = -explosionAxis.y * distance;
+//                 result.segments[i].displacement.z = -explosionAxis.z * distance;
+//             }
+
+//             // 向右（爆炸轴正方向）的片段
+//             for (int i = centerSegmentIndex + 1; i < numSegments; i++)
+//             {
+//                 float distance = explosionDistance * (i - centerSegmentIndex);
+//                 result.segments[i].displacement.x = explosionAxis.x * distance;
+//                 result.segments[i].displacement.y = explosionAxis.y * distance;
+//                 result.segments[i].displacement.z = explosionAxis.z * distance;
+//             }
+//         }
+
+//         // 设置每个片段的OpenGL缓冲
+//         for (auto &segment : result.segments)
+//         {
+//             setupSegmentMesh(segment);
+//         }
+
+//         return result;
+//     }
+
+//     // 保留这个函数用于后续更新爆炸距离
+//     void updateExplodedViewDisplacements(
+//         ExplodedView &explodedView,
+//         const Vec3 &explosionAxis,
+//         float explosionDistance)
+//     {
+//         explodedView.explosionDistance = explosionDistance;
+//         auto &segments = explodedView.segments;
+//         int numSegments = segments.size();
+
+//         if (numSegments <= 1)
+//         {
+//             // 只有一个片段，不需要爆炸
+//             if (!segments.empty())
+//             {
+//                 segments[0].displacement = Vec3(0, 0, 0);
+//             }
+//             return;
+//         }
+
+//         // 确定固定的中心片段
+//         int centerSegmentIndex;
+//         if (numSegments % 2 == 1)
+//         {
+//             // 奇数个片段，中间片段固定
+//             centerSegmentIndex = numSegments / 2;
+//         }
+//         else
+//         {
+//             // 偶数个片段，选择中间两个的第一个固定
+//             centerSegmentIndex = numSegments / 2 - 1;
+//         }
+
+//         // 设置中心片段位移为0
+//         segments[centerSegmentIndex].displacement = Vec3(0, 0, 0);
+
+//         // 计算其他片段的位移
+//         // 向左（爆炸轴负方向）的片段
+//         for (int i = centerSegmentIndex - 1; i >= 0; i--)
+//         {
+//             float distance = explosionDistance * (centerSegmentIndex - i);
+//             segments[i].displacement.x = -explosionAxis.x * distance;
+//             segments[i].displacement.y = -explosionAxis.y * distance;
+//             segments[i].displacement.z = -explosionAxis.z * distance;
+//         }
+
+//         // 向右（爆炸轴正方向）的片段
+//         for (int i = centerSegmentIndex + 1; i < numSegments; i++)
+//         {
+//             float distance = explosionDistance * (i - centerSegmentIndex);
+//             segments[i].displacement.x = explosionAxis.x * distance;
+//             segments[i].displacement.y = explosionAxis.y * distance;
+//             segments[i].displacement.z = explosionAxis.z * distance;
+//         }
+
+//         // 更新每个片段的OpenGL缓冲
+//         for (auto &segment : segments)
+//         {
+//             updateSegmentMesh(segment);
+//         }
+//     }
+
+//     // 设置片段的VAO/VBO/EBO
+//     void setupSegmentMesh(ExplodedSegment &segment)
+//     {
+//         if (segment.vertices.empty() || segment.indices.empty())
+//         {
+//             return;
+//         }
+
+//         glGenVertexArrays(1, &segment.VAO);
+//         glGenBuffers(1, &segment.VBO);
+//         glGenBuffers(1, &segment.EBO);
+
+//         glBindVertexArray(segment.VAO);
+
+//         glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
+//         glBufferData(GL_ARRAY_BUFFER, segment.vertices.size() * sizeof(Vertex),
+//                      segment.vertices.data(), GL_STATIC_DRAW);
+
+//         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, segment.EBO);
+//         glBufferData(GL_ELEMENT_ARRAY_BUFFER, segment.indices.size() * sizeof(IndexType),
+//                      segment.indices.data(), GL_STATIC_DRAW);
+
+//         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
+//         glEnableVertexAttribArray(0);
+
+//         glBindVertexArray(0);
+//     }
+
+//     // 更新片段的网格数据
+//     void updateSegmentMesh(ExplodedSegment &segment)
+//     {
+//         if (segment.vertices.empty() || segment.indices.empty())
+//         {
+//             return;
+//         }
+
+//         // 应用位移到顶点
+//         std::vector<Vertex> displacedVertices = segment.vertices;
+//         for (auto &v : displacedVertices)
+//         {
+//             v.x += segment.displacement.x;
+//             v.y += segment.displacement.y;
+//             v.z += segment.displacement.z;
+//         }
+
+//         glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
+//         glBufferData(GL_ARRAY_BUFFER, displacedVertices.size() * sizeof(Vertex),
+//                      displacedVertices.data(), GL_STATIC_DRAW);
+//     }
+
+//     // 清理爆炸视图资源
+//     void cleanupExplodedView(ExplodedView &explodedView)
+//     {
+//         for (auto &segment : explodedView.segments)
+//         {
+//             if (segment.VAO != 0)
+//             {
+//                 glDeleteVertexArrays(1, &segment.VAO);
+//                 segment.VAO = 0;
+//             }
+//             if (segment.VBO != 0)
+//             {
+//                 glDeleteBuffers(1, &segment.VBO);
+//                 segment.VBO = 0;
+//             }
+//             if (segment.EBO != 0)
+//             {
+//                 glDeleteBuffers(1, &segment.EBO);
+//                 segment.EBO = 0;
+//             }
+//         }a
+
+//         explodedView.segments.clear();
+//     }
+
+// } // namespace MC

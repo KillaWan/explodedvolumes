@@ -9,7 +9,7 @@
 namespace MC
 {
 
-    // 计算点到平面的距离
+    // calculate the distance between point and plane
     float pointToPlaneDistance(const Vertex &v, const CuttingPlane &plane)
     {
         return (v.x - plane.origin.x) * plane.normal.x +
@@ -17,7 +17,7 @@ namespace MC
                (v.z - plane.origin.z) * plane.normal.z;
     }
 
-    // 计算两点之间的线性插值
+    // calclute linear interpolation between two points
     Vertex interpolateVertex(const Vertex &v1, const Vertex &v2, float t)
     {
         Vertex result;
@@ -27,36 +27,33 @@ namespace MC
         return result;
     }
 
-    // 计算顶点在爆炸轴上的投影
+    // calculate the projection of the vertex on the explode axis
     float projectVertexOnAxis(const Vertex &vertex, const Vec3 &axis)
     {
         return vertex.x * axis.x + vertex.y * axis.y + vertex.z * axis.z;
     }
 
-    // 三角形与平面相交检测
+
     bool trianglePlaneIntersection(
         const Vertex &v0, const Vertex &v1, const Vertex &v2,
         const CuttingPlane &plane,
         IntersectionSegment &segment)
     {
 
-        // 计算三个顶点到平面的距离
         float d0 = pointToPlaneDistance(v0, plane);
         float d1 = pointToPlaneDistance(v1, plane);
         float d2 = pointToPlaneDistance(v2, plane);
 
-        // 如果所有点都在平面同一侧，则不相交
+        // if all points are on the same side of the plane, then there is no intersection
         if ((d0 > 0 && d1 > 0 && d2 > 0) || (d0 < 0 && d1 < 0 && d2 < 0))
         {
             return false;
         }
 
-        // 如果任何点在平面上（距离为0），需要特殊处理
         bool v0OnPlane = std::abs(d0) < 1e-6f;
         bool v1OnPlane = std::abs(d1) < 1e-6f;
         bool v2OnPlane = std::abs(d2) < 1e-6f;
 
-        // 收集交点
         std::vector<Vertex> intersections;
 
         // 检查每条边是否与平面相交
@@ -69,19 +66,17 @@ namespace MC
 
         if (!v1OnPlane && !v2OnPlane && d1 * d2 <= 0.0f)
         {
-            // v1-v2 边与平面相交
             float t = d1 / (d1 - d2);
             intersections.push_back(interpolateVertex(v1, v2, t));
         }
 
         if (!v2OnPlane && !v0OnPlane && d2 * d0 <= 0.0f)
         {
-            // v2-v0 边与平面相交
             float t = d2 / (d2 - d0);
             intersections.push_back(interpolateVertex(v2, v0, t));
         }
 
-        // 处理顶点在平面上的情况
+        // if the vertex is on a plane
         if (v0OnPlane)
         {
             intersections.push_back(v0);
@@ -95,7 +90,7 @@ namespace MC
             intersections.push_back(v2);
         }
 
-        // 去除重复的交点（可能由于浮点精度问题导致）
+        // remove duplicate intersections
         if (intersections.size() > 1)
         {
             for (size_t i = 0; i < intersections.size(); i++)
@@ -120,7 +115,6 @@ namespace MC
             }
         }
 
-        // 如果找到两个不同的交点，则保存为一个线段
         if (intersections.size() >= 2)
         {
             segment.start = intersections[0];
@@ -129,11 +123,9 @@ namespace MC
         }
         else if (intersections.size() == 1)
         {
-            // 只有一个交点，可能是顶点与平面相交，这种情况下不生成线段
-            // 或者也可以生成一个很短的线段来表示这个点
             segment.start = intersections[0];
             segment.end = intersections[0];
-            // 添加一个微小的偏移以便能够渲染
+         
             segment.end.x += 0.0001f;
             segment.end.y += 0.0001f;
             segment.end.z += 0.0001f;
@@ -144,7 +136,7 @@ namespace MC
     }
 
     // 计算切割平面与网格的交线
-#include <omp.h>
+
 
     PlaneIntersection computePlaneIntersections(
         const Mesh &mesh,
