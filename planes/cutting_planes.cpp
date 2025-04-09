@@ -5,6 +5,9 @@
 #include <map>
 #include <glad/glad.h>
 #include <omp.h>
+#ifdef _WIN32
+#include <mutex>
+#endif
 
 namespace MC
 {
