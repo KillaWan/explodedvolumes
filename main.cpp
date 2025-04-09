@@ -1,10 +1,11 @@
-#include "headers/data.h"
-#include "headers/marching_cubes.h"
-#include "headers/visual.h"
 #include "headers/explosionaxis/explosion_axis_strategy.h"
 #include "headers/planes/selecting_planes.h"
 #include "headers/planes/cutting_planes.h"
 #include "headers/planes/exploded_view.h"
+#include "headers/marching_cubes.h"
+#include "headers/visual.h"
+#include "post_processor.h"
+#include "headers/data.h"
 
 #include <iostream>
 #include <vector>
@@ -15,7 +16,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "post_processor.h"
 
 // GLAD & GLFW
 #include <glad/glad.h>
@@ -26,7 +26,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-// 处理 isoLevel 改变的函数
+// isoLevel change
 void handleIsoLevelChange(
     MC::VolumeData &volumeData, 
     float newIsoLevel, 
@@ -41,46 +41,39 @@ void handleIsoLevelChange(
     std::vector<MC::CuttingPlane> &cuttingPlanes,
     MC::ExplodedView &explodedView)
 {
-    // 重新生成网格
+    // regenerate Mesh
     MC::generateMesh(volumeData, newIsoLevel, mesh);
     MC::updateMesh(mesh, VAO, VBO, EBO);
 
-    // 更新轴线顶点
+    // update axis vertex
     float halfLength = mesh.max_dimension * 2.0f;
     axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
     axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
     axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
-
     axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
     axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
     axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
 
-    // 更新轴线VBO
+    // update axis VBO
     MC::Vertex axisLine[2] = {axisStart, axisEnd};
     glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(axisLine), axisLine, GL_STATIC_DRAW);
 
-    // 重新生成切割平面
+    // regenerate cutting planes
     cuttingPlanes = MC::generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3);
 
-    // // 重新计算切割平面与网格的交线
-    // planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
-
-    // // 更新交线VAO/VBO
-    // MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
-
-    // 重新计算爆炸视图
+    // recalculate exploded view
     MC::cleanupExplodedView(explodedView);
     explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis, MC::g_explosionDistance);
 
-    // 为爆炸视图中的每个片段设置VAO/VBO/EBO
+    // set up VAO/VBO/EBO for each clip in the exploded view
     for (auto &segment : explodedView.segments)
     {
         MC::setupSegmentMesh(segment);
     }
 }
 
-// 处理爆炸轴重新计算的函数
+// explosion axis change
 void recalculateExplosionAxisAndView(
     MC::Mesh &mesh,
     MC::Vec3 &explosionAxis,
@@ -143,12 +136,6 @@ void recalculateExplosionAxisAndView(
     // 重新生成切割平面 - 明确指定切割数量和使用新的爆炸轴
     cuttingPlanes = MC::generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3); // 3个切割平面
 
-    // 重新计算切割平面与网格的交线
-    // planeIntersection = MC::computePlaneIntersections(mesh, cuttingPlanes);
-    
-    // 更新交线VAO/VBO
-    // MC::updateIntersectionVAO(planeIntersection, intersectionVAO, intersectionVBO);
-
     // 重新计算爆炸视图
     explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis, MC::g_explosionDistance);
 
@@ -176,10 +163,7 @@ int main()
 
     // initialize OpenGL
     GLFWwindow *window = initOpenGL();
-    if (!window)
-    {
-        return -1;
-    }
+    if (!window){ return -1;}
 
     // initialize ImGui
     setupImGui(window);
@@ -188,6 +172,7 @@ int main()
     bool recalculateExplosionAxis = false;
     ImGui::GetIO().UserData = &recalculateExplosionAxis;
 
+    // create post-process for rendering
     PostProcess postProcessor;
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -198,8 +183,8 @@ int main()
         return -1;
     }
 
-    // 记录初始窗口大小，用于检测调整大小
     int lastWidth = width, lastHeight = height;
+
     // open NIfTI file
     std::string filePath = openNiftiFileDialog();
     if (filePath.empty())
@@ -218,7 +203,7 @@ int main()
         return -1;
     }
 
-    // initialize mesh and Marching Cubes
+    // initialize mesh and marching cubes
     Mesh mesh;
     float isoLevelPercent = 10.0f;
     float tempIsoLevelPercent = isoLevelPercent;
@@ -226,25 +211,20 @@ int main()
     float tempIsoLevel = isoLevel;
     generateMesh(volumeData, isoLevel, mesh);
 
-    // Compute symmetry/explosion axis
-    std::string currentExplosionStrategy = MC::ExplosionAxisConfig::convertToUIName(
-        MC::getCurrentExplosionStrategyName());
+    // compute symmetry/explosion axis
+    std::string currentExplosionStrategy = MC::ExplosionAxisConfig::convertToUIName(MC::getCurrentExplosionStrategyName());
     Vec3 explosionAxis = MC::computeExplosionAxis(mesh.vertices);
-    std::cout << "Computed explosion axis: ("
-              << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
-
-    // Create axis line for visualization
+    std::cout << "Computed explosion axis: (" << explosionAxis.x << ", " << explosionAxis.y << ", " << explosionAxis.z << ")\n";
     Vertex axisStart, axisEnd;
     float halfLength = mesh.max_dimension * 2.0f;
     axisStart.x = mesh.center.x - explosionAxis.x * halfLength;
     axisStart.y = mesh.center.y - explosionAxis.y * halfLength;
     axisStart.z = mesh.center.z - explosionAxis.z * halfLength;
-
     axisEnd.x = mesh.center.x + explosionAxis.x * halfLength;
     axisEnd.y = mesh.center.y + explosionAxis.y * halfLength;
     axisEnd.z = mesh.center.z + explosionAxis.z * halfLength;
 
-    // Create VAO/VBO for the symmetry axis line
+    // create VAO/VBO for the symmetry axis line
     unsigned int axisVAO, axisVBO;
     glGenVertexArrays(1, &axisVAO);
     glGenBuffers(1, &axisVBO);
@@ -257,29 +237,23 @@ int main()
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
-    // Create shader program for the mesh
+    // create shader program
     unsigned int shaderProgram = createShaderProgram();
-
-    // Create shader program for the symmetry axis line
     unsigned int lineShaderProgram = createLineShaderProgram();
 
     // create VAO/VBO/EBO for the mesh
     unsigned int VAO, VBO, EBO;
     setupMesh(mesh, VAO, VBO, EBO);
 
-    // 生成切割平面
+    // cutting plane & exploded view
     std::vector<CuttingPlane> cuttingPlanes = generateAdaptiveCuttingPlanes(mesh, explosionAxis, 3);
-
-    // 计算爆炸视图
     ExplodedView explodedView = computeExplodedView(mesh, cuttingPlanes, explosionAxis);
-
-    // 为爆炸视图中的每个片段设置VAO/VBO/EBO
     for (auto &segment : explodedView.segments)
     {
         setupSegmentMesh(segment);
     }
 
-    // 记录状态变量
+    // record current status
     static std::string lastStrategy = currentExplosionStrategy;
     static float lastIsoLevel = isoLevel;
     static float lastExplosionDistance = explodedView.explosionDistance;
@@ -295,10 +269,8 @@ int main()
             lastHeight = height;
         }
 
-        // 更新爆炸视图状态
+        // update exploded view
         explodedView.enabled = showIntersections;
-
-        // 在main.cpp的主循环中添加代码来同步爆炸距离
         if (g_explosionDistance != explodedView.explosionDistance)
         {
             explodedView.explosionDistance = g_explosionDistance;
@@ -306,20 +278,18 @@ int main()
             lastExplosionDistance = explodedView.explosionDistance;
         }
 
-        // 渲染当前帧
+        // render frame
         if (!explodedView.enabled)
         {
-            // 正常渲染完整模型
             renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel,
                         tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor, axisVAO);
         }
         else
         {
-            // 渲染爆炸视图
             renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData, axisVAO);
         }
 
-        // 处理爆炸距离更新 (通过UI控制后)
+        // explosion distance update after being controlled by ui
         if (explodedView.explosionDistance != lastExplosionDistance)
         {
             updateExplodedViewDisplacements(explodedView, explosionAxis, explodedView.explosionDistance);
@@ -327,10 +297,9 @@ int main()
         }
         tempIsoLevel = volumeData.minValue + (MC::g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
 
-        // 如果ISO值已更改，重新生成网格
+        // regenerate mesh if iso value has been changed
         if (isoLevel != lastIsoLevel)
         {
-            // 更新百分比值和绝对值
             isoLevel = volumeData.minValue + (MC::g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
             handleIsoLevelChange(
                 volumeData, isoLevel, mesh, VAO, VBO, EBO,
@@ -341,7 +310,7 @@ int main()
             lastIsoLevel = isoLevel;
         }
 
-        // 从ImGui获取是否需要手动重新计算的标志
+        // if recalculation is required
         bool shouldRecalculate = recalculateExplosionAxis;
         if (shouldRecalculate || lastStrategy != currentExplosionStrategy)
         {
@@ -350,17 +319,14 @@ int main()
                 axisStart, axisEnd, axisVBO,
                 cuttingPlanes,
                 explodedView, lastExplosionDistance);
-            
-            // 重置标志
             recalculateExplosionAxis = false;
         }
 
-        // 交换缓冲区并处理事件
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // 清理资源
+    // clean
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
@@ -368,16 +334,12 @@ int main()
     glDeleteBuffers(1, &axisVBO);
     glDeleteProgram(shaderProgram);
     glDeleteProgram(lineShaderProgram);
-
     postProcessor.cleanup();
-
-    // 清理爆炸视图资源
     cleanupExplodedView(explodedView);
-
-    // 清理ImGui
     cleanupImGui();
 
-    // 终止GLFW
+    // terminate GLFW
     glfwTerminate();
+
     return 0;
 }
