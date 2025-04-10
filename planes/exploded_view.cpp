@@ -369,55 +369,49 @@ namespace MC
 
         std::sort(sortedPlaneIndices.begin(), sortedPlaneIndices.end());
 
-        // 初始化片段（n个平面会产生n+1个片段）
+        // Initialize segments (n planes produce n+1 segments)
         result.segments.resize(planes.size() + 1);
 
-        // 为每个片段创建顶点映射
         std::vector<std::unordered_map<Vertex, size_t, VertexHash, VertexEqual>> vertexMaps(planes.size() + 1);
 
-        // 使用多阶段切割算法
-        // 首先，将整个网格视为一个片段
+        // multi-stage cutting
+        // consider the whole grid as a fragment
         std::vector<Vertex> currentVertices = mesh.vertices;
         std::vector<IndexType> currentIndices = mesh.indices;
 
-        // 对每个切割平面进行处理
+        // processing of each cutting plane
         for (size_t planeIdx = 0; planeIdx < sortedPlaneIndices.size(); ++planeIdx)
         {
             const CuttingPlane &plane = planes[sortedPlaneIndices[planeIdx].second];
 
-            // 切割后的两部分（平面正面和负面）
             std::vector<Vertex> positiveVertices, negativeVertices;
             std::vector<IndexType> positiveIndices, negativeIndices;
             std::unordered_map<Vertex, size_t, VertexHash, VertexEqual> posVertexMap, negVertexMap;
 
-            // 对当前片段中的每个三角形进行切割
             for (size_t i = 0; i < currentIndices.size(); i += 3)
             {
                 const Vertex &v0 = currentVertices[currentIndices[i]];
                 const Vertex &v1 = currentVertices[currentIndices[i + 1]];
                 const Vertex &v2 = currentVertices[currentIndices[i + 2]];
 
-                // 切割三角形并将结果添加到正面和负面集合中
                 cutTriangleByPlane(v0, v1, v2, plane,
                                    positiveVertices, positiveIndices,
                                    negativeVertices, negativeIndices,
                                    posVertexMap, negVertexMap);
             }
 
-            // 将正面部分保存为当前片段，继续处理下一个平面
             result.segments[planeIdx].vertices = std::move(negativeVertices);
             result.segments[planeIdx].indices = std::move(negativeIndices);
 
-            // 更新当前片段为切割后的正面部分
             currentVertices = std::move(positiveVertices);
             currentIndices = std::move(positiveIndices);
         }
 
-        // 最后一个片段是最后一次切割后剩余的正面部分
+        // the last clip is the front portion remaining after the last cut was made
         result.segments[planes.size()].vertices = std::move(currentVertices);
         result.segments[planes.size()].indices = std::move(currentIndices);
 
-// 计算每个片段的中心点
+// calculate the center point of each segment
 #pragma omp parallel for
         for (size_t i = 0; i < result.segments.size(); ++i)
         {
@@ -427,11 +421,10 @@ namespace MC
             }
         }
 
-        // 计算爆炸位移
+        // Calculating Exploded Displacement
         int numSegments = result.segments.size();
         if (numSegments <= 1)
         {
-            // 只有一个片段，不需要爆炸
             if (!result.segments.empty())
             {
                 result.segments[0].displacement = Vec3(0, 0, 0);
@@ -439,26 +432,21 @@ namespace MC
         }
         else
         {
-            // 确定固定的中心片段
             int centerSegmentIndex;
             if (numSegments % 2 == 1)
             {
-                // 奇数个片段，中间片段固定
                 centerSegmentIndex = numSegments / 2;
             }
             else
             {
-                // 偶数个片段，选择中间两个的第一个固定
                 centerSegmentIndex = numSegments / 2 - 1;
             }
 
-// 设置各片段的位移
 #pragma omp parallel for
             for (int i = 0; i < numSegments; ++i)
             {
                 if (i < centerSegmentIndex)
                 {
-                    // 向左（爆炸轴负方向）的片段
                     float distance = explosionDistance * (centerSegmentIndex - i);
                     result.segments[i].displacement.x = -explosionAxis.x * distance;
                     result.segments[i].displacement.y = -explosionAxis.y * distance;
@@ -466,7 +454,6 @@ namespace MC
                 }
                 else if (i > centerSegmentIndex)
                 {
-                    // 向右（爆炸轴正方向）的片段
                     float distance = explosionDistance * (i - centerSegmentIndex);
                     result.segments[i].displacement.x = explosionAxis.x * distance;
                     result.segments[i].displacement.y = explosionAxis.y * distance;
@@ -474,13 +461,12 @@ namespace MC
                 }
                 else
                 {
-                    // 中心片段
                     result.segments[i].displacement = Vec3(0, 0, 0);
                 }
             }
         }
 
-        // 移除空的片段
+        // remove empty segments
         result.segments.erase(
             std::remove_if(result.segments.begin(), result.segments.end(),
                            [](const ExplodedSegment &segment)
@@ -489,14 +475,14 @@ namespace MC
                            }),
             result.segments.end());
 
-// 设置每个片段的OpenGL缓冲
+// setting the OpenGL buffer for each fragment
 #pragma omp parallel for
         for (size_t i = 0; i < result.segments.size(); ++i)
         {
             setupSegmentMesh(result.segments[i]);
         }
 
-        // 计时结束
+        // time end
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 
@@ -506,7 +492,7 @@ namespace MC
         return result;
     }
 
-    // 更新爆炸视图的位移
+    // update exploded view
     void updateExplodedViewDisplacements(
         ExplodedView &explodedView,
         const Vec3 &explosionAxis,
@@ -518,7 +504,6 @@ namespace MC
 
         if (numSegments <= 1)
         {
-            // 只有一个片段，不需要爆炸
             if (!segments.empty())
             {
                 segments[0].displacement = Vec3(0, 0, 0);
@@ -526,28 +511,24 @@ namespace MC
             return;
         }
 
-        // 确定固定的中心片段
         int centerSegmentIndex;
         if (numSegments % 2 == 1)
         {
-            // 奇数个片段，中间片段固定
             centerSegmentIndex = numSegments / 2;
         }
         else
         {
-            // 偶数个片段，选择中间两个的第一个固定
             centerSegmentIndex = numSegments / 2 - 1;
         }
 
-        // 设置中心片段位移为0
         segments[centerSegmentIndex].displacement = Vec3(0, 0, 0);
 
-// 计算其他片段的位移 - 并行处理
+// calculate the displacement of other segments - parallel processing
 #pragma omp parallel sections
         {
 #pragma omp section
             {
-                // 向左（爆炸轴负方向）的片段
+                // fragmentation in the negative direction of the exploded axis
                 for (int i = centerSegmentIndex - 1; i >= 0; i--)
                 {
                     float distance = explosionDistance * (centerSegmentIndex - i);
@@ -559,7 +540,7 @@ namespace MC
 
 #pragma omp section
             {
-                // 向右（爆炸轴正方向）的片段
+                // fragmentation in the positive direction of the exploded axis
                 for (int i = centerSegmentIndex + 1; i < numSegments; i++)
                 {
                     float distance = explosionDistance * (i - centerSegmentIndex);
@@ -570,7 +551,7 @@ namespace MC
             }
         }
 
-// 更新每个片段的OpenGL缓冲 - 并行处理
+// update OpenGL buffers for each fragment - parallel processing
 #pragma omp parallel for
         for (size_t i = 0; i < segments.size(); i++)
         {
@@ -578,7 +559,6 @@ namespace MC
         }
     }
 
-    // 设置片段的VAO/VBO/EBO
     void setupSegmentMesh(ExplodedSegment &segment)
     {
         if (segment.vertices.empty() || segment.indices.empty())
@@ -586,7 +566,6 @@ namespace MC
             return;
         }
 
-        // 如果已经有VAO，先删除
         if (segment.VAO != 0)
         {
             glDeleteVertexArrays(1, &segment.VAO);
@@ -601,7 +580,6 @@ namespace MC
 
         glBindVertexArray(segment.VAO);
 
-        // 创建包含位移的顶点数据
         std::vector<Vertex> displacedVertices = segment.vertices;
         for (auto &v : displacedVertices)
         {
@@ -624,7 +602,6 @@ namespace MC
         glBindVertexArray(0);
     }
 
-    // 更新片段的网格数据
     void updateSegmentMesh(ExplodedSegment &segment)
     {
         if (segment.vertices.empty() || segment.indices.empty() || segment.VAO == 0)
@@ -632,7 +609,6 @@ namespace MC
             return;
         }
 
-        // 应用位移到顶点
         std::vector<Vertex> displacedVertices = segment.vertices;
         for (auto &v : displacedVertices)
         {
@@ -646,7 +622,7 @@ namespace MC
                      displacedVertices.data(), GL_STATIC_DRAW);
     }
 
-    // 清理爆炸视图资源
+    // cleaning up exploded view resources
     void cleanupExplodedView(ExplodedView &explodedView)
     {
         for (auto &segment : explodedView.segments)
