@@ -1125,10 +1125,10 @@ void main() {
         ImGui::DestroyContext();
     }
 
-    // Initalize OpenGL
+    // Initialize OpenGL
     GLFWwindow *initOpenGL()
     {
-        // Initalize GLFW
+        // Initialize GLFW
         if (!glfwInit())
         {
             std::cerr << "GLFW initialization failed\n";
@@ -1153,7 +1153,7 @@ void main() {
         GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Marching Cubes Visualization", nullptr, nullptr);
         if (!window)
         {
-            std::cerr << "创建GLFW窗口失败\n";
+            std::cerr << "GLFW Window failed to create\n";
             glfwTerminate();
             return nullptr;
         }
@@ -1169,10 +1169,10 @@ void main() {
         glfwSetScrollCallback(window, scroll_callback);
         glfwSetKeyCallback(window, key_callback);
 
-        // 初始化GLAD
+        // Initialize GLAD
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
-            std::cerr << "初始化GLAD失败\n";
+            std::cerr << "GLAD initialization failed\n";
             return nullptr;
         }
 
@@ -1272,13 +1272,13 @@ void main() {
         if (axisVAO != 0)
             glDeleteVertexArrays(1, &axisVAO);
 
-        // 清理后处理器
+        // Cleanup postprocessor
         postProcessor.cleanup();
 
-        // 清理ImGui
+        // Cleanup ImGui
         cleanupImGui();
 
-        // 终止GLFW
+        // Terminate GLFW
         glfwTerminate();
     }
 } // namespace MC
