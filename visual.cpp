@@ -348,20 +348,20 @@ void main() {
     void renderExplosionAxisGUI(std::string &currentStrategy)
     {
         ImGuiStyle &style = ImGui::GetStyle();
-        style.Colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
-        style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
-        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
-        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
-        style.Colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
-        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
-        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
-        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        style.Colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
 
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
         float panelWidth = 300.0f;
         float spacing = 10.0f;
-        float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f; // 在第一个面板下方
+        float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f;
 
         if(panelFirstTime) {
             ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
@@ -400,20 +400,17 @@ void main() {
 
             if (ImGui::Checkbox("Use Custom Axis", &config.useCustomExplosionAxis))
             {
-                // 切换状态时的行为
                 if (!config.useCustomExplosionAxis)
                 {
-                    // 如果取消自定义轴，恢复策略计算的轴
                     *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true; // 触发重新计算
                 }
 
-                // 应用配置更新
                 MC::applyExplosionAxisConfig(config);
             }
 
             if (config.useCustomExplosionAxis)
             {
-                // 自定义X,Y,Z轴控制
+                // custom X, Y, Z axis control
                 bool axisChanged = false;
                 axisChanged |= ImGui::DragFloat("Axis X", &config.customExplosionAxis.x, 0.01f, -1.0f, 1.0f);
                 axisChanged |= ImGui::DragFloat("Axis Y", &config.customExplosionAxis.y, 0.01f, -1.0f, 1.0f);
@@ -421,17 +418,15 @@ void main() {
 
                 if (axisChanged)
                 {
-                    // 如果轴值改变，应用配置更新
                     MC::applyExplosionAxisConfig(config);
                 }
 
-                // 计算轴向量长度
+                // calculate the axis vector length
                 float length = std::sqrt(
                     config.customExplosionAxis.x * config.customExplosionAxis.x +
                     config.customExplosionAxis.y * config.customExplosionAxis.y +
                     config.customExplosionAxis.z * config.customExplosionAxis.z);
 
-                // 显示归一化的轴向量
                 if (length > 0.0001f)
                 {
                     ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)",
@@ -440,27 +435,21 @@ void main() {
                                 config.customExplosionAxis.z / length);
                 }
 
-                // 应用自定义轴的按钮
                 if (ImGui::Button("Apply Custom Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
                 {
                     if (length > 0.0001f)
                     {
-                        // 进行归一化
                         Vec3 normalizedAxis = {
                             config.customExplosionAxis.x / length,
                             config.customExplosionAxis.y / length,
                             config.customExplosionAxis.z / length};
 
-                        // 更新配置中的自定义轴为归一化后的值
                         config.customExplosionAxis = normalizedAxis;
 
-                        // 应用配置
                         MC::applyExplosionAxisConfig(config);
 
-                        // 重绘模型 - 设置重新计算标志
                         *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
 
-                        // 显示成功应用的提示
                         ImGui::TextColored(ImVec4(0.0f, 0.6f, 0.0f, 1.0f), "Custom axis applied!");
                     }
                     else
@@ -473,28 +462,25 @@ void main() {
             ImGui::Separator();
             ImGui::Text("Strategy Selection");
 
-            // 创建下拉选择框
+            // create a drop-down selection box
             if (ImGui::Combo("##Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
             {
-                // 用户选择了新的策略，仅更新UI显示，不立即应用
                 currentStrategy = strategies[currentIndex];
 
-                // 只在UI上显示已选择新策略，但不实际应用
                 if (previousStrategy != currentStrategy)
                 {
                     ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
                 }
             }
 
-            // 根据选择的策略显示不同的参数设置
             ImGui::Separator();
 
-            // 检查是否需要显示错误弹窗
+            // check whether to display an error popup
             static bool errorShown = false;
             bool shouldShowError = false;
             std::string errorMessage;
 
-            // 通用检测失败
+            // generic test failure
             if (!config.lastDetectionSuccessful)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f),
@@ -509,13 +495,10 @@ void main() {
                                "Try adjusting the parameters or selecting a different strategy.";
             }
 
-            // 以下代码与原始函数相同，根据策略显示不同参数
             if (currentStrategy == "Rotational Symmetry")
             {
-                // (Rotational Symmetry 的现有代码保持不变)
                 ImGui::Text("Rotational Symmetry Parameters:");
 
-                // 特定策略的状态提示
                 if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
@@ -526,17 +509,11 @@ void main() {
                                    "Try adjusting the sample count or symmetry order,\n"
                                    "or switch to a different strategy.";
                 }
-
-                // (其余 Rotational Symmetry 代码保持不变)
             }
-            // (其他策略分支保持不变)
-
-            // 在所有策略分支之后添加轴线可见性控制
             ImGui::Text("Explosion Axis Visibility");
 
             ImGui::Checkbox("Show Explosion Axis", &showExplosionAxis);
 
-            // 如果应该显示错误弹窗且之前未显示过
             if (shouldShowError && !errorShown)
             {
                 MC::showError("Symmetry Detection Failed", errorMessage);
@@ -544,44 +521,38 @@ void main() {
             }
             else if (!shouldShowError)
             {
-                // 重置错误显示标志
                 errorShown = false;
             }
 
             ImGui::Separator();
 
-            // 显示说明信息
             if (previousStrategy != currentStrategy && !config.useCustomExplosionAxis)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
                                    "Strategy change will be applied when you click 'Recalculate'");
             }
 
-            // 添加重新计算按钮（仅在未选择自定义轴时显示）
+            // add recalculate button (only shown if no custom axis is selected)
             if (!config.useCustomExplosionAxis && ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
             {
-                // 如果策略已更改，立即应用新策略
                 if (previousStrategy != currentStrategy)
                 {
                     std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
                     config.strategyName = newInternalStrategy;
                     MC::setExplosionStrategy(newInternalStrategy);
                     MC::applyExplosionAxisConfig(config);
-                    previousStrategy = currentStrategy; // 更新先前策略记录
+                    previousStrategy = currentStrategy;
                 }
 
-                // 设置重新计算标志
+                // set the recalculation flag
                 *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
-                // 重置错误显示标志，以便在重新计算后能显示新的错误
                 errorShown = false;
             }
         }
         ImGui::End();
-
-        // 调用渲染弹出窗口的函数
         MC::renderErrorPopup();
     } 
-    // 设置弹出错误窗口的函数
+
     void showError(const std::string &title, const std::string &message)
     {
         errorPopupTitle = title;
@@ -589,17 +560,15 @@ void main() {
         showErrorPopup = true;
     }
 
-    // 渲染错误弹出窗口的函数
+    // render error popup
     void renderErrorPopup()
     {
         if (showErrorPopup)
         {
-            // 设置弹出窗口大小和位置
             ImVec2 center = ImGui::GetMainViewport()->GetCenter();
             ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
 
-            // 创建模态弹出窗口
             if (ImGui::BeginPopupModal(errorPopupTitle.c_str(), &showErrorPopup,
                                        ImGuiWindowFlags_AlwaysAutoResize))
             {
@@ -608,10 +577,8 @@ void main() {
                 ImGui::PopStyleColor();
                 ImGui::Separator();
 
-                // 创建居中的确认按钮
                 ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 120) * 0.5f);
 
-                // 设置按钮样式
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -624,12 +591,11 @@ void main() {
                     ImGui::CloseCurrentPopup();
                 }
 
-                ImGui::PopStyleColor(3); // 弹出按钮样式
+                ImGui::PopStyleColor(3);
 
                 ImGui::EndPopup();
             }
 
-            // 如果showErrorPopup为true，打开弹出窗口
             if (showErrorPopup)
             {
                 ImGui::OpenPopup(errorPopupTitle.c_str());
@@ -646,82 +612,68 @@ void main() {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
 
-        // 绑定后处理FBO，渲染到纹理
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
-        // 清屏
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 白色背景
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // 开始ImGui帧
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 应用白色主题
         setupImGuiStyle();
 
-        // 计算面板位置和大小以垂直排列
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
 
-        float panelWidth = 300.0f;                   // 所有面板的固定宽度
-        float panelSpacing = 10.0f;                  // 面板间距
-        float panel1Height = viewportSize.y * 0.2f; // 每个面板占屏幕高度的1/4
-        float panel2Height = viewportSize.y * 0.45f;
+        float panelWidth = 300.0f;
+        float panelSpacing = 10.0f;
+        float panel1Height = viewportSize.y * 0.2f;
+        float panel2Height = viewportSize.y * 0.5f;
         float panel3Height = viewportSize.y * 0.2f;
 
-        // 面板1：主控制
+        // panel 1
         if (panelFirstTime) {
             ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
             ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         }
         ImGui::Begin("Marching Cubes Control", nullptr);
 
-        ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
+        ImGui::Text("ISO level: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
 
-        // 从0-100的百分比滑块
-        if (ImGui::SliderFloat("ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
+        if (ImGui::SliderFloat("##ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
         {
-            // 转换百分比到绝对值
             tempIsoLevel = volumeData.minValue + (g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
 
-        // 应用ISO值的按钮
         if (ImGui::Button("Apply ISO"))
         {
             g_isoLevelPercent = g_tempIsoLevelPercent;
             isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue); 
-            // 调用者需处理网格重新生成
         }
         ImGui::SameLine();
         ImGui::Text("Current ISO: %.1f (%.1f%%)", isoLevel, g_isoLevelPercent);
+        ImGui::End();
 
-        ImGui::End(); // 结束主控制面板
+        // panel 2
+        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
 
-        // 面板2：爆炸轴设置
-        if (panelFirstTime) {
-            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
-            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
-        }
-        renderExplosionAxisGUI(currentExplosionStrategy);
+        std::string currentStrategy = "";
+        renderExplosionAxisGUI(currentStrategy);
 
-        // 面板3：爆炸视图控制
+        // panel 3
         if (panelFirstTime) {
             ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
             ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         }
         ImGui::Begin("Explosion View Control", nullptr);
 
-        // 添加爆炸视图控制
         if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
         {
             std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
         }
+        const float MAX_EXPLOSION_DISTANCE = 40.0f;
 
-        // 爆炸距离控制
-        const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
-
-        // 创建一个静态临时变量用于滑块
         static bool firstRun = true;
         if (firstRun)
         {
@@ -731,17 +683,12 @@ void main() {
         ImGui::Text("Explosion Distance");
         if (showIntersections)
         {
-            // 滑块控制临时值
             if (ImGui::SliderFloat("##Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
-
             {
-                // 不立即应用，等用户点击按钮确认
             }
 
-            // 应用按钮
             if (ImGui::Button("Apply Distance"))
             {
-                // 应用临时值到实际使用的变量
                 g_explosionDistancePercent = tempExplosionPercent;
                 g_explosionDistance = (g_explosionDistancePercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
             }
@@ -751,12 +698,10 @@ void main() {
         }
         else
         {
-            // 禁用状态下的滑块和按钮
             ImGui::BeginDisabled();
-            ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::SliderFloat("##Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
             if (ImGui::Button("Apply Distance"))
             {
-                // 禁用状态不会触发
             }
             ImGui::SameLine();
             ImGui::Text("Current: %.1f%%", g_explosionDistancePercent);
@@ -765,24 +710,19 @@ void main() {
 
         ImGui::End();
 
-        // 渲染ImGui界面
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-
-        // 获取视口大小
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (height != 0) ? (float)width / height : 1.0f;
 
-        // 使用着色器
         glUseProgram(shaderProgram);
 
-        // 构建变换
         glm::mat4 model(1.0f);
         float scale_factor = 20.0f / mesh.max_dimension;
         model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
 
-        // 居中模型
+        // center
         glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
         model = glm::translate(model, -glmCenter);
 
@@ -793,7 +733,7 @@ void main() {
 
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
 
-        // 传递uniform
+        // transform uniform
         int modelLoc = glGetUniformLocation(shaderProgram, "model");
         int viewLoc = glGetUniformLocation(shaderProgram, "view");
         int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -802,7 +742,6 @@ void main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // 绘制
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -810,10 +749,9 @@ void main() {
         unsigned int axisShader = createLineShaderProgram();
         glUseProgram(axisShader);
 
-        // 仅在 showExplosionAxis 为 true 时绘制轴线
+        // draw the axis only when showExplosionAxis is true
         if (showExplosionAxis)
         {
-            // 将之前计算的 model、view、projection 传入该着色器
             int axisModelLoc = glGetUniformLocation(axisShader, "model");
             int axisViewLoc = glGetUniformLocation(axisShader, "view");
             int axisProjLoc = glGetUniformLocation(axisShader, "projection");
@@ -821,30 +759,27 @@ void main() {
             glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-            // 设置线宽
             glLineWidth(20.0f);
 
-            // 绑定爆炸轴 VAO 并绘制线段（两个顶点）
             glBindVertexArray(axisVAO);
             glDrawArrays(GL_LINES, 0, 2);
             glBindVertexArray(0);
         }
 
-        // 切换回默认帧缓冲
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // 应用后处理效果
+        // post processor
         postProcessor.render(width, height);
 
-        // 渲染ImGui
+        // render ImGui
         ImGui::Render();
-        // 仅在 showExplosionAxis 为 true 时绘制轴线
+
+        // draw the axis only when showExplosionAxis is true
         if (showExplosionAxis)
         {
             unsigned int axisShader = createLineShaderProgram();
             glUseProgram(axisShader);
 
-            // 将之前计算的 model、view、projection 传入该着色器
             int axisModelLoc = glGetUniformLocation(axisShader, "model");
             int axisViewLoc = glGetUniformLocation(axisShader, "view");
             int axisProjLoc = glGetUniformLocation(axisShader, "projection");
@@ -852,10 +787,7 @@ void main() {
             glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-            // 设置线宽
             glLineWidth(20.0f);
-
-            // 绘制轴线 - 需要您确认是否有axisVAO
             glBindVertexArray(axisVAO);
             glDrawArrays(GL_LINES, 0, 2);
             glBindVertexArray(0);
@@ -873,67 +805,66 @@ void main() {
         const VolumeData &volumeData,
         unsigned int axisVAO)
     {
-        // 开始ImGui帧
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 应用白色主题
         setupImGuiStyle();
 
-        // 计算面板位置和大小以垂直排列
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
 
-        float panelWidth = 300.0f;                   // 所有面板的固定宽度
-        float panelSpacing = 10.0f;                  // 面板间距
-        float panel1Height = viewportSize.y * 0.2f; // 每个面板占屏幕高度的1/4
-        float panel2Height = viewportSize.y * 0.45f;
+        float panelWidth = 300.0f;
+        float panelSpacing = 10.0f;
+        float panel1Height = viewportSize.y * 0.2f;
+        float panel2Height = viewportSize.y * 0.5f;
         float panel3Height = viewportSize.y * 0.2f;
 
-        // 面板1：主控制
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
-        
+        // panel 1
+        if (panelFirstTime)
+        {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
+        }
         ImGui::Begin("Marching Cubes Control", nullptr);
 
-        ImGui::Text("Data range: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
-        if (ImGui::SliderFloat("ISO Level", &tempIsoLevel, volumeData.minValue, volumeData.maxValue, "%.1f"))
+        ImGui::Text("ISO level: %.1f to %.1f", volumeData.minValue, volumeData.maxValue);
+
+        if (ImGui::SliderFloat("##ISO Level (%)", &g_tempIsoLevelPercent, 0.0f, 100.0f, "%.1f%%"))
         {
+            tempIsoLevel = volumeData.minValue + (g_tempIsoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
+
         if (ImGui::Button("Apply ISO"))
         {
-            isoLevel = tempIsoLevel;
+            g_isoLevelPercent = g_tempIsoLevelPercent;
+            isoLevel = volumeData.minValue + (g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
         }
         ImGui::SameLine();
-        ImGui::Text("Current ISO: %.1f", isoLevel);
+        ImGui::Text("Current ISO: %.1f (%.1f%%)", isoLevel, g_isoLevelPercent);
         ImGui::End();
 
-        // 面板2：爆炸轴设置
+        // panel 2
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
 
-        // 使用当前的爆炸策略或默认策略
         std::string currentStrategy = "";
         renderExplosionAxisGUI(currentStrategy);
 
-        // 面板3：爆炸视图控制
+        // panel 3
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         ImGui::Begin("Explosion View Control", nullptr);
 
-        // 添加爆炸视图控制
         if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
         {
             std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
         }
+        const float MAX_EXPLOSION_DISTANCE = 40.0f;
 
-        // 爆炸距离控制
-        const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
-
+        ImGui::Text("Explosion Distance");
         if (showIntersections)
         {
-            // 计算当前爆炸距离的百分比用于显示
             float currentDistancePercent = (explodedView.explosionDistance / MAX_EXPLOSION_DISTANCE) * 100.0f;
             static bool firstRun = true;
             if (firstRun)
@@ -942,16 +873,12 @@ void main() {
                 firstRun = false;
             }
 
-            // 滑块控制临时值
-            if (ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
+            if (ImGui::SliderFloat("##Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
             {
-                // 不立即应用，等用户点击按钮确认
             }
 
-            // 应用按钮
             if (ImGui::Button("Apply Distance"))
             {
-                // 应用临时值到实际使用的变量
                 g_explosionDistancePercent = tempExplosionPercent;
                 g_explosionDistance = (tempExplosionPercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
             }
@@ -961,12 +888,10 @@ void main() {
         }
         else
         {
-            // 禁用状态下的滑块和按钮
             ImGui::BeginDisabled();
-            ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
+            ImGui::SliderFloat("##Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%");
             if (ImGui::Button("Apply Distance"))
             {
-                // 禁用状态不会触发
             }
             ImGui::SameLine();
             ImGui::Text("Current: %.1f%%", g_explosionDistancePercent);
@@ -975,21 +900,18 @@ void main() {
 
         ImGui::End();
 
-        // 清屏
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 白色背景
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // 视口大小
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (height != 0) ? (float)width / height : 1.0f;
 
-        // 构建变换矩阵
         glm::mat4 model(1.0f);
         float scale_factor = 20.0f / mesh.max_dimension;
         model = glm::scale(model, glm::vec3(scale_factor, scale_factor, scale_factor));
 
-        // 居中模型
+        // center
         glm::vec3 glmCenter(mesh.center.x, mesh.center.y, mesh.center.z);
         model = glm::translate(model, -glmCenter);
 
@@ -1000,7 +922,7 @@ void main() {
 
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
 
-        // 对每个片段进行渲染
+        // render each fragment
         if (explodedView.enabled)
         {
             for (const auto &segment : explodedView.segments)
@@ -1012,14 +934,12 @@ void main() {
 
                 glUseProgram(shaderProgram);
 
-                // 创建模型矩阵，应用位移
                 glm::mat4 segmentModel = model;
                 segmentModel = glm::translate(segmentModel, glm::vec3(
                                                                 segment.displacement.x,
                                                                 segment.displacement.y,
                                                                 segment.displacement.z));
 
-                // 传递变换矩阵
                 int modelLoc = glGetUniformLocation(shaderProgram, "model");
                 int viewLoc = glGetUniformLocation(shaderProgram, "view");
                 int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -1028,14 +948,13 @@ void main() {
                 glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
                 glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-                // 绘制片段
                 glBindVertexArray(segment.VAO);
                 glDrawElements(GL_TRIANGLES, segment.indices.size(), GL_UNSIGNED_INT, 0);
                 glBindVertexArray(0);
             }
         }
 
-        // 渲染ImGui
+        // render ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -1044,7 +963,6 @@ void main() {
             unsigned int axisShader = createLineShaderProgram();
             glUseProgram(axisShader);
 
-            // 传递矩阵和渲染轴线的代码
             int axisModelLoc = glGetUniformLocation(axisShader, "model");
             int axisViewLoc = glGetUniformLocation(axisShader, "view");
             int axisProjLoc = glGetUniformLocation(axisShader, "projection");
@@ -1060,7 +978,7 @@ void main() {
         }
     }
 
-    // 设置ImGui
+    // set up ImGui
     void setupImGui(GLFWwindow *window)
     {
         IMGUI_CHECKVERSION();
@@ -1068,41 +986,35 @@ void main() {
         ImGuiIO &io = ImGui::GetIO();
         (void)io;
 
-        // 使用亮色主题而不是暗色主题
         ImGui::StyleColorsLight();
-
-        // 应用我们的自定义白色主题
         ImGuiStyle &style = ImGui::GetStyle();
         ImVec4 *colors = style.Colors;
 
-        // 设置UI颜色为白色背景和黑色文字
-        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
-        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
-        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
-        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
-        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
-        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
-        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
-        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
-        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);        // 深灰色复选标记
-        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);       // 灰色滑块抓取
-        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 活动时较深的滑块
-        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);   // 悬停时浅灰色框架
-        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 活动时稍深
-        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色标头
-        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
-        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
-        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);        // 灰色分隔符
-        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);          // 白色弹出背景
+        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // 调整填充和间距以获得更整洁的外观
         style.WindowPadding = ImVec2(12.0f, 12.0f);
         style.FramePadding = ImVec2(6.0f, 4.0f);
         style.ItemSpacing = ImVec2(8.0f, 6.0f);
         style.ItemInnerSpacing = ImVec2(6.0f, 6.0f);
         style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
 
-        // 圆角以获得更现代的外观
         style.WindowRounding = 4.0f;
         style.FrameRounding = 3.0f;
         style.PopupRounding = 4.0f;
@@ -1110,14 +1022,13 @@ void main() {
         style.GrabRounding = 3.0f;
         style.TabRounding = 4.0f;
 
-        // 窗口标题对齐
-        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
 
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330");
     }
 
-    // 清理ImGui
+    // clean ImGui
     void cleanupImGui()
     {
         ImGui_ImplOpenGL3_Shutdown();
@@ -1125,10 +1036,9 @@ void main() {
         ImGui::DestroyContext();
     }
 
-    // 初始化OpenGL
+    // initialize OpenGL
     GLFWwindow *initOpenGL()
     {
-        // 初始化GLFW
         if (!glfwInit())
         {
             std::cerr << "GLFW初始化失败\n";
@@ -1142,23 +1052,19 @@ void main() {
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-        // 获取主显示器的分辨率
         const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
-        // 根据屏幕分辨率计算窗口大小（屏幕大小的80%）
         int windowWidth = static_cast<int>(mode->width * 0.8f);
         int windowHeight = static_cast<int>(mode->height * 0.8f);
 
-        // 创建具有计算大小的窗口
         GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Marching Cubes Visualization", nullptr, nullptr);
         if (!window)
         {
-            std::cerr << "创建GLFW窗口失败\n";
+            std::cerr << "Failed to create GLFW window\n";
             glfwTerminate();
             return nullptr;
         }
 
-        // 在屏幕上居中窗口
         int screenWidth = mode->width;
         int screenHeight = mode->height;
         glfwSetWindowPos(window, (screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2);
@@ -1169,14 +1075,12 @@ void main() {
         glfwSetScrollCallback(window, scroll_callback);
         glfwSetKeyCallback(window, key_callback);
 
-        // 初始化GLAD
+        // initialize GLAD
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
             std::cerr << "初始化GLAD失败\n";
             return nullptr;
         }
-
-        // 启用深度测试和背面剔除
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -1184,53 +1088,40 @@ void main() {
         return window;
     }
 
-    // 修改runRenderingLoop函数中的postProcessor初始化部分
+    // modify the postProcessor initialization part in the runRenderingLoop function
     void runRenderingLoop(GLFWwindow *window, const VolumeData &volumeData, Mesh &mesh)
     {
-        // 设置初始状态
         float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f; // 从中间值开始
         float tempIsoLevel = isoLevel;
 
-        // 相机初始化
         camera.distance = 100.0f;
         camera.zoom = 1.0f;
         camera.rotationX = 0.0f;
         camera.rotationY = 0.0f;
 
-        // 设置着色器
         unsigned int shaderProgram = createShaderProgram();
 
-        // 设置网格
         unsigned int VAO, VBO, EBO;
         setupMesh(mesh, VAO, VBO, EBO);
 
-        // 设置轴可视化
         unsigned int axisVAO = 0;
-        // 初始化axisVAO和相关缓冲区
-
-        // 获取窗口大小来初始化后处理器
         int windowWidth, windowHeight;
         glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 
-        // 设置后处理，传入窗口宽度和高度
         PostProcess postProcessor;
         postProcessor.init(windowWidth, windowHeight);
 
-        // 当前爆炸策略
         std::string currentExplosionStrategy = "";
 
-        // 重新计算标志（用于ImGui）
         bool recalculateNeeded = false;
         ImGuiIO &io = ImGui::GetIO();
         io.UserData = &recalculateNeeded;
 
-        // 主渲染循环
+        // main render loop
         while (!glfwWindowShouldClose(window))
         {
-            // 轮询事件
             glfwPollEvents();
 
-            // 检查窗口大小是否改变，如果改变则重新初始化后处理器
             int currentWidth, currentHeight;
             glfwGetFramebufferSize(window, &currentWidth, &currentHeight);
             if (currentWidth != windowWidth || currentHeight != windowHeight)
@@ -1241,29 +1132,22 @@ void main() {
                 postProcessor.init(windowWidth, windowHeight);
             }
 
-            // 检查是否需要基于UI交互进行重新计算
             if (recalculateNeeded)
             {
-                // 在这里执行重新计算
-                // ...
-
-                // 重置标志
+                // Reset Flag
                 recalculateNeeded = false;
             }
 
-            // 更新视口
             updateViewport(window);
 
-            // 渲染帧
             renderFrame(window, shaderProgram, VAO, mesh, camera, isoLevel, tempIsoLevel,
                         volumeData, currentExplosionStrategy, postProcessor,
                         axisVAO);
 
-            // 交换缓冲区
             glfwSwapBuffers(window);
         }
 
-        // 清理
+        // clean
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
@@ -1272,13 +1156,10 @@ void main() {
         if (axisVAO != 0)
             glDeleteVertexArrays(1, &axisVAO);
 
-        // 清理后处理器
         postProcessor.cleanup();
 
-        // 清理ImGui
         cleanupImGui();
 
-        // 终止GLFW
         glfwTerminate();
     }
 } // namespace MC
