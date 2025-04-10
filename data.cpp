@@ -1,18 +1,18 @@
 #include "headers/data.h"
-#include "nifti1_io.h"   // NIfTI库
-#include "file_dialog.h" // 文件对话框
+#include "nifti1_io.h"
+#include "file_dialog.h"
 
 
 namespace MC
 {
 
-    // 体积数据访问函数
+    // Load Volume
     float getVolumeValue(const float *data, int x, int y, int z, const int dims[3])
     {
         return data[x + dims[0] * (y + dims[1] * z)];
     }
 
-    // 计算网格的边界和中心
+    // Boundary and Center
     void calculateMeshBounds(const std::vector<Vertex> &vertices,
                              Vec3 &min_bounds, Vec3 &max_bounds, Vec3 &center)
     {
@@ -45,7 +45,7 @@ namespace MC
         center.z = (min_bounds.z + max_bounds.z) / 2.0f;
     }
 
-    // NIfTI文件加载函数
+    // Load NIfTI
     bool loadNiiFile(const std::string &filename, VolumeData &volume)
     {
         nifti_image *nim = nifti_image_read(filename.c_str(), 1);
@@ -59,11 +59,11 @@ namespace MC
         volume.dims[1] = nim->ny;
         volume.dims[2] = nim->nz;
 
-        // 跟踪最小和最大值
+        // Tracking Min/Max
         float min_val = std::numeric_limits<float>::max();
         float max_val = std::numeric_limits<float>::lowest();
 
-        // 为体积数据分配内存
+        // Allocate
         volume.data = std::make_unique<float[]>(nim->nvox);
 
         if (nim->datatype == NIFTI_TYPE_FLOAT32)
@@ -93,7 +93,7 @@ namespace MC
             return false;
         }
 
-        // 设置最小/最大值
+        // Min/Max
         volume.minValue = min_val;
         volume.maxValue = max_val;
 

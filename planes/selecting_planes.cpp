@@ -8,12 +8,12 @@
 
 namespace MC
 {
-    // 3x3矩阵结构（用于协方差矩阵和特征向量）
+    // 3x3 matrix
     struct Matrix3x3
     {
         float m[3][3] = {{0}};
 
-        // 基本矩阵操作
+        // Basic operation
         void zero()
         {
             for (int i = 0; i < 3; i++)
@@ -25,7 +25,7 @@ namespace MC
             }
         }
 
-        // 矩阵乘以向量
+        // Mul vec
         Vec3 multiply(const Vec3 &v) const
         {
             Vec3 result;
@@ -36,7 +36,7 @@ namespace MC
         }
     };
 
-    // 向量标准化
+    // Normalize
     Vec3 normalize(const Vec3 &v)
     {
         float length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -47,7 +47,7 @@ namespace MC
         return {0.0f, 0.0f, 0.0f};
     }
 
-    // 向量叉积
+    // cross
     Vec3 cross(const Vec3 &a, const Vec3 &b)
     {
         Vec3 result;
@@ -57,18 +57,18 @@ namespace MC
         return result;
     }
 
-    // 向量点积
+    // dot
     float dot(const Vec3 &a, const Vec3 &b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    // 简化的OBB结构
+    // OBB
     struct OBB
     {
-        Vec3 center;  // OBB中心
-        Vec3 axes[3]; // OBB的三个轴向（单位向量）
-        Vec3 extents; // OBB在三个轴向上的半长度
+        Vec3 center;
+        Vec3 axes[3];
+        Vec3 extents;
     };
 
     // 使用幂迭代法计算矩阵的主特征向量

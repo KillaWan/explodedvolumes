@@ -1041,7 +1041,7 @@ void main() {
     {
         if (!glfwInit())
         {
-            std::cerr << "GLFW初始化失败\n";
+            std::cerr << "GLFW initialization failed\n";
             return nullptr;
         }
 
@@ -1078,7 +1078,7 @@ void main() {
         // initialize GLAD
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
-            std::cerr << "初始化GLAD失败\n";
+            std::cerr << "GLAD initialization failed\n";
             return nullptr;
         }
         glEnable(GL_DEPTH_TEST);
