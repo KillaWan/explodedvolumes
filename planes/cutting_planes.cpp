@@ -59,10 +59,10 @@ namespace MC
 
         std::vector<Vertex> intersections;
 
-        // 检查每条边是否与平面相交
+        // Check intersection
         if (!v0OnPlane && !v1OnPlane && d0 * d1 <= 0.0f)
         {
-            // v0-v1 边与平面相交
+            // v0-v1 intersects
             float t = d0 / (d0 - d1);
             intersections.push_back(interpolateVertex(v0, v1, t));
         }
@@ -107,7 +107,6 @@ namespace MC
 
                     if (distSq < 1e-10f)
                     {
-                        // 删除重复点
                         intersections.erase(intersections.begin() + j);
                     }
                     else
@@ -138,8 +137,6 @@ namespace MC
         return false;
     }
 
-    // 计算切割平面与网格的交线
-
 
     PlaneIntersection computePlaneIntersections(
         const Mesh &mesh,
@@ -155,11 +152,9 @@ namespace MC
             return intersection;
         }
 
-        // 使用线程安全的向量
         std::vector<IntersectionSegment> threadSafeSegments;
         std::mutex segmentMutex;
 
-// 并行计算交线
 #pragma omp parallel for
         for (size_t planeIdx = 0; planeIdx < planes.size(); planeIdx++)
         {
@@ -183,7 +178,7 @@ namespace MC
                 }
             }
 
-// 线程安全地合并结果
+// Merge safely
 #pragma omp critical
             {
                 threadSafeSegments.insert(
@@ -201,20 +196,18 @@ namespace MC
         return intersection;
     }
 
-    // 创建用于显示交线的VAO/VBO
+    // VAO and VBO
     void setupIntersectionVAO(
         const PlaneIntersection &intersection,
         unsigned int &VAO,
         unsigned int &VBO)
     {
 
-        // VAO and VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
         glBindVertexArray(VAO);
 
-        // 将所有线段顶点放入一个数组
         std::vector<Vertex> lineVertices;
         for (const auto &segment : intersection.segments)
         {
@@ -227,21 +220,21 @@ namespace MC
         glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(Vertex),
                      lineVertices.data(), GL_STATIC_DRAW);
 
-        // 设置顶点属性
+        // set attr
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
         glEnableVertexAttribArray(0);
 
         glBindVertexArray(0);
     }
 
-    // 更新交线VAO/VBO
+    // update intersection VAO
     void updateIntersectionVAO(
         const PlaneIntersection &intersection,
         unsigned int &VAO,
         unsigned int &VBO)
     {
 
-        // 将所有线段顶点放入一个数组
+        // set all line vertices in one array
         std::vector<Vertex> lineVertices;
         for (const auto &segment : intersection.segments)
         {
@@ -249,13 +242,13 @@ namespace MC
             lineVertices.push_back(segment.end);
         }
 
-        // 更新VBO数据
+        // update VBO
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(Vertex),
                      lineVertices.data(), GL_STATIC_DRAW);
     }
 
-    // 计算模型爆炸分段
+    // compute Model Segments
     std::vector<ModelSegment> computeModelSegments(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
@@ -267,16 +260,15 @@ namespace MC
 
         if (planes.empty() || mesh.vertices.empty() || mesh.indices.empty())
         {
-            // 如果没有切割平面或网格为空，将整个模型作为一个分段
             ModelSegment wholeMesh;
             wholeMesh.startIndex = 0;
             wholeMesh.indexCount = mesh.indices.size();
-            wholeMesh.displacement = {0, 0, 0}; // 不移动
+            wholeMesh.displacement = {0, 0, 0};
             segments.push_back(wholeMesh);
             return segments;
         }
 
-        // 对切割平面按照位置排序
+        // Sort according to proj
         std::vector<CuttingPlane> sortedPlanes = planes;
         std::sort(sortedPlanes.begin(), sortedPlanes.end(),
                   [&explosionAxis](const CuttingPlane &a, const CuttingPlane &b)
@@ -290,11 +282,9 @@ namespace MC
                       return projA < projB;
                   });
 
-        // 计算每个三角形所属的分段
         std::vector<int> triangleSegments(mesh.indices.size() / 3, -1);
         std::vector<float> planePositions(sortedPlanes.size());
 
-        // 计算每个平面在爆炸轴上的投影位置
         for (size_t i = 0; i < sortedPlanes.size(); ++i)
         {
             planePositions[i] = sortedPlanes[i].origin.x * explosionAxis.x +
@@ -302,21 +292,17 @@ namespace MC
                                 sortedPlanes[i].origin.z * explosionAxis.z;
         }
 
-        // 分析每个三角形，确定它属于哪个分段
         for (size_t triIndex = 0; triIndex < mesh.indices.size() / 3; ++triIndex)
         {
-            // 获取三角形的三个顶点
             const Vertex &v0 = mesh.vertices[mesh.indices[triIndex * 3]];
             const Vertex &v1 = mesh.vertices[mesh.indices[triIndex * 3 + 1]];
             const Vertex &v2 = mesh.vertices[mesh.indices[triIndex * 3 + 2]];
 
-            // 计算三角形中心点在爆炸轴上的投影
             float centerProj = (projectVertexOnAxis(v0, explosionAxis) +
                                 projectVertexOnAxis(v1, explosionAxis) +
                                 projectVertexOnAxis(v2, explosionAxis)) /
                                3.0f;
 
-            // 确定三角形所在的分段
             int segmentIndex = 0;
             for (size_t planeIdx = 0; planeIdx < planePositions.size(); ++planeIdx)
             {
@@ -330,22 +316,22 @@ namespace MC
             triangleSegments[triIndex] = segmentIndex;
         }
 
-        // 统计每个分段的三角形数量
+        // Number of tri
         std::map<int, int> segmentTriangleCounts;
         for (int segIndex : triangleSegments)
         {
             segmentTriangleCounts[segIndex]++;
         }
 
-        // 创建临时索引数组，按分段重新组织
+        // Temp array
         std::vector<IndexType> newIndices;
         newIndices.reserve(mesh.indices.size());
 
-        // 记录每个分段在新索引数组中的起始位置
+        // New pos in temp array
         std::vector<int> segmentStartIndices(segmentTriangleCounts.size(), 0);
         int segmentCount = segmentTriangleCounts.size();
 
-        // 为每个分段分配空间
+        // Allocation
         for (int i = 0; i < segmentCount; ++i)
         {
             if (i > 0)
@@ -355,14 +341,14 @@ namespace MC
             newIndices.resize(newIndices.size() + segmentTriangleCounts[i] * 3);
         }
 
-        // 填充新索引数组
+        // fill in new index array
         std::vector<int> segmentCurrentIndices = segmentStartIndices;
         for (size_t triIndex = 0; triIndex < triangleSegments.size(); ++triIndex)
         {
             int segIdx = triangleSegments[triIndex];
             int newStartIdx = segmentCurrentIndices[segIdx];
 
-            // 复制三角形的三个索引
+            // copy indices
             newIndices[newStartIdx] = mesh.indices[triIndex * 3];
             newIndices[newStartIdx + 1] = mesh.indices[triIndex * 3 + 1];
             newIndices[newStartIdx + 2] = mesh.indices[triIndex * 3 + 2];
@@ -370,23 +356,22 @@ namespace MC
             segmentCurrentIndices[segIdx] += 3;
         }
 
-        // 计算分段位移
         segments.resize(segmentCount);
 
-        // 确定固定点
+        // calculate fixed point
         int fixedSegmentIndex;
         if (segmentCount % 2 == 1)
         {
-            // 奇数段，中间段固定
+            // odd
             fixedSegmentIndex = segmentCount / 2;
         }
         else
         {
-            // 偶数段，中间两段之间的切面位置固定
+            // even
             fixedSegmentIndex = segmentCount / 2 - 1;
         }
 
-        // 计算每个分段的位移
+        // Calculate offset for each
         for (int i = 0; i < segmentCount; ++i)
         {
             segments[i].startIndex = segmentStartIndices[i];
@@ -404,7 +389,7 @@ namespace MC
         return segments;
     }
 
-    // 设置爆炸后模型的VAO/VBO/EBO
+    // Set VAO VBO EBO
     void setupExplodedMesh(
         const Mesh &mesh,
         const std::vector<ModelSegment> &segments,
@@ -413,7 +398,7 @@ namespace MC
         unsigned int &EBO)
     {
 
-        // 如果已经创建了VAO，则先删除
+        // If existed
         if (VAO != 0)
         {
             glDeleteVertexArrays(1, &VAO);
@@ -421,11 +406,11 @@ namespace MC
             glDeleteBuffers(1, &EBO);
         }
 
-        // 创建新的顶点和索引数组
+        // Create new indices and vertices
         std::vector<Vertex> explodedVertices;
         std::vector<IndexType> explodedIndices;
 
-        // 计算需要的总容量
+        // Calculate total
         size_t totalVertexCount = mesh.vertices.size();
         size_t totalIndexCount = 0;
         for (const auto &segment : segments)
@@ -436,16 +421,16 @@ namespace MC
         explodedVertices.reserve(totalVertexCount);
         explodedIndices.reserve(totalIndexCount);
 
-        // 复制顶点
+        // Copy vertices
         for (const auto &vertex : mesh.vertices)
         {
             explodedVertices.push_back(vertex);
         }
 
-        // 计算分段顶点所需的偏移量
+        // Calculate offsets
         std::vector<Vec3> vertexOffsets(explodedVertices.size(), Vec3(0, 0, 0));
 
-        // 为每个分段中的顶点设置偏移量
+        // Calculate offsets for each
         for (const auto &segment : segments)
         {
             for (int i = 0; i < segment.indexCount; ++i)
@@ -455,7 +440,7 @@ namespace MC
             }
         }
 
-        // 应用偏移量到顶点
+        // Applying offsets
         for (size_t i = 0; i < explodedVertices.size(); ++i)
         {
             explodedVertices[i].x += vertexOffsets[i].x;
@@ -463,26 +448,26 @@ namespace MC
             explodedVertices[i].z += vertexOffsets[i].z;
         }
 
-        // 使用原始索引
+        // Using original indices
         explodedIndices = mesh.indices;
 
-        // 创建VAO和VBO
+        // Create VAO and VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);
 
         glBindVertexArray(VAO);
 
-        // 绑定顶点缓冲
+        // Bind buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, explodedVertices.size() * sizeof(Vertex),
                      explodedVertices.data(), GL_STATIC_DRAW);
 
-        // 设置顶点属性
+        // Set attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
         glEnableVertexAttribArray(0);
 
-        // 绑定索引缓冲
+        // Bind index buffer
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, explodedIndices.size() * sizeof(IndexType),
                      explodedIndices.data(), GL_STATIC_DRAW);
@@ -490,7 +475,7 @@ namespace MC
         glBindVertexArray(0);
     }
 
-    // 更新爆炸状态
+    // Update exp state
     void updateExplosionState(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
@@ -505,15 +490,15 @@ namespace MC
 
         if (explodeEnabled)
         {
-            // 计算模型分段
+            // compute segments
             segments = computeModelSegments(mesh, planes, explosionAxis, explodeDistance);
 
-            // 设置爆炸后的模型
+            // calculate updated model
             setupExplodedMesh(mesh, segments, VAO, VBO, EBO);
         }
         else
         {
-            // 非爆炸状态，使用原始网格
+            // original mesh
             if (VAO != 0)
             {
                 glDeleteVertexArrays(1, &VAO);
@@ -522,7 +507,7 @@ namespace MC
                 VAO = VBO = EBO = 0;
             }
 
-            // 清空分段信息
+            // clear info
             segments.clear();
         }
     }
