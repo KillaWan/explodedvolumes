@@ -105,7 +105,7 @@ namespace MC
         return true;
     }
 
-    // 使用文件对话框打开NIfTI文件
+    // Open NifTi
     std::string openNiftiFileDialog()
     {
         std::string filePath = FileDialog::openFile(
