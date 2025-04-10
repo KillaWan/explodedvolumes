@@ -3,7 +3,7 @@
 #include <vector>
 #include <cmath>
 
-// 后处理顶点着色器：用于绘制全屏quad
+// postProcessVertexShaderSource
 const char* postProcessVertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec2 aPos;
@@ -16,18 +16,17 @@ void main()
 }
 )glsl";
 
-// 后处理片段着色器：采用Sobel边缘检测，模拟pen-and-ink风格
+// postProcessFragmentShaderSource using sobel mimic Pen and Ink
 const char* postProcessFragmentShaderSource = R"glsl(
 #version 330 core
 out vec4 FragColor;
 in vec2 TexCoords;
 
-uniform sampler2D scene;  // 场景纹理
+uniform sampler2D scene;
 uniform vec2 texelSize;   // 1.0 / textureWidth, 1.0 / textureHeight
 
 void main()
 {
-    // 定义Sobel核
     float kernelX[9] = float[]( -1,  0,  1,
                                  -2,  0,  2,
                                  -1,  0,  1 );
@@ -37,7 +36,6 @@ void main()
     
     vec3 sampleTex[9];
     int index = 0;
-    // 采样3x3邻域
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
             vec2 offset = vec2(float(x), float(y)) * texelSize;
@@ -45,7 +43,6 @@ void main()
         }
     }
     
-    // 将颜色转为灰度（使用常见的加权平均）
     float gray[9];
     for (int i = 0; i < 9; i++) {
         gray[i] = dot(sampleTex[i], vec3(0.299, 0.587, 0.114));
@@ -60,7 +57,6 @@ void main()
     
     float edge = length(vec2(gx, gy));
     
-    // 调整阈值和混合因子以获得pen-and-ink效果
     float edgeThreshold = 0.4;
     vec3 penColor = edge > edgeThreshold ? vec3(0.0) : vec3(1.0);
     
@@ -122,7 +118,6 @@ GLuint PostProcess::createPostProcessShader()
 void PostProcess::initQuad()
 {
     float quadVertices[] = {
-        // positions   // texCoords
         -1.0f,  1.0f,  0.0f, 1.0f,
         -1.0f, -1.0f,  0.0f, 0.0f,
          1.0f, -1.0f,  1.0f, 0.0f,
@@ -155,7 +150,7 @@ bool PostProcess::init(int screenWidth, int screenHeight)
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     
-    // 创建颜色附件纹理
+    // Creating Color Attachment Textures
     glGenTextures(1, &sceneTexture);
     glBindTexture(GL_TEXTURE_2D, sceneTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
@@ -163,7 +158,7 @@ bool PostProcess::init(int screenWidth, int screenHeight)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sceneTexture, 0);
     
-    // 创建渲染缓冲对象用于深度和模板附件
+    // Creating Buffer
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
@@ -176,10 +171,9 @@ bool PostProcess::init(int screenWidth, int screenHeight)
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
-    // 初始化全屏quad
     initQuad();
     
-    // 创建后处理shader程序
+    // Create PostProcess Shader
     postProcessShader = createPostProcessShader();
     
     return true;
@@ -199,7 +193,7 @@ void PostProcess::render(int screenWidth, int screenHeight)
     glBindTexture(GL_TEXTURE_2D, sceneTexture);
     glUniform1i(glGetUniformLocation(postProcessShader, "scene"), 0);
     
-    // 传递纹理尺寸信息
+    // Pass Textural Info
     glUniform2f(glGetUniformLocation(postProcessShader, "texelSize"), 1.0f / screenWidth, 1.0f / screenHeight);
     
     glBindVertexArray(quadVAO);
