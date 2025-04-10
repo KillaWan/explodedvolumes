@@ -655,11 +655,12 @@ void main() {
         ImGui::End();
 
         // panel 2
-        ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
-
-        std::string currentStrategy = "";
-        renderExplosionAxisGUI(currentStrategy);
+        if (panelFirstTime)
+        {
+            ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
+            ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
+        }
+        renderExplosionAxisGUI(currentExplosionStrategy);
 
         // panel 3
         if (panelFirstTime) {
@@ -1048,6 +1049,7 @@ void main() {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
