@@ -14,7 +14,7 @@ EigenReflectiveSymmetryDetector::EigenReflectiveSymmetryDetector(float distanceT
 
 bool EigenReflectiveSymmetryDetector::detect(
     const std::vector<Vertex>& meshVertices,
-    Vec3& outReflectiveNormal) {
+    Vec3& outAxis) {
     
     if (meshVertices.empty()) {
         std::cout << "Empty mesh provided to detector" << std::endl;
@@ -38,7 +38,7 @@ bool EigenReflectiveSymmetryDetector::detect(
     // Compute covariance matrix
     Eigen::Matrix3f covariance = (points.transpose() * points) / static_cast<float>(points.rows());
     
-    // Compute eigenvectors
+    // Compute eigenvectors and eigenvalues
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigensolver(covariance);
     
     if (eigensolver.info() != Eigen::Success) {
@@ -46,11 +46,24 @@ bool EigenReflectiveSymmetryDetector::detect(
         return false;
     }
     
+    // Store eigenvalues and eigenvectors
+    std::vector<std::pair<float, Eigen::Vector3f>> eigenVectorsWithValues;
+    for (int i = 0; i < 3; i++) {
+        eigenVectorsWithValues.push_back({
+            eigensolver.eigenvalues()(i),
+            eigensolver.eigenvectors().col(i)
+        });
+    }
+    
+    // Sort by eigenvalue in descending order
+    std::sort(eigenVectorsWithValues.begin(), eigenVectorsWithValues.end(),
+        [](const auto& a, const auto& b) { return a.first > b.first; });
+    
     // Get the principal axes as potential symmetry plane normals
     std::vector<Eigen::Vector3f> planeNormals;
-    planeNormals.push_back(eigensolver.eigenvectors().col(0));
-    planeNormals.push_back(eigensolver.eigenvectors().col(1));
-    planeNormals.push_back(eigensolver.eigenvectors().col(2));
+    for (const auto& evp : eigenVectorsWithValues) {
+        planeNormals.push_back(evp.second);
+    }
     
     // Also check standard axes
     planeNormals.push_back(Eigen::Vector3f(1, 0, 0));
@@ -71,14 +84,67 @@ bool EigenReflectiveSymmetryDetector::detect(
     
     // If we found a good candidate
     if (bestScore > 0.7f) { // 70% threshold
-        outReflectiveNormal = Vec3(bestNormal(0), bestNormal(1), bestNormal(2));
+        // Found a symmetry plane with normal bestNormal
+        // Now find the two axes on this plane (perpendicular to the normal)
+        
+        // Find which principal axis is most aligned with the normal
+        int normalAxisIdx = -1;
+        float maxAlignment = -1.0f;
+        
+        for (int i = 0; i < 3; i++) {
+            float alignment = std::abs(bestNormal.dot(eigenVectorsWithValues[i].second));
+            if (alignment > maxAlignment) {
+                maxAlignment = alignment;
+                normalAxisIdx = i;
+            }
+        }
+        
+        // The other two axes are on the plane - pick the one with the larger eigenvalue
+        if (normalAxisIdx == 0) {
+            // If normal is most aligned with the first principal axis,
+            // return the second axis (which has larger eigenvalue than the third)
+            outAxis = Vec3(
+                eigenVectorsWithValues[1].second(0),
+                eigenVectorsWithValues[1].second(1),
+                eigenVectorsWithValues[1].second(2)
+            );
+        } else if (normalAxisIdx == 1) {
+            // If normal is most aligned with the second principal axis,
+            // return the first axis (which has larger eigenvalue)
+            outAxis = Vec3(
+                eigenVectorsWithValues[0].second(0),
+                eigenVectorsWithValues[0].second(1),
+                eigenVectorsWithValues[0].second(2)
+            );
+        } else {
+            // If normal is most aligned with the third principal axis,
+            // return the first axis (which has larger eigenvalue than the second)
+            outAxis = Vec3(
+                eigenVectorsWithValues[0].second(0),
+                eigenVectorsWithValues[0].second(1),
+                eigenVectorsWithValues[0].second(2)
+            );
+        }
+        
         std::cout << "Detected reflective symmetry with normal: (" 
-                  << outReflectiveNormal.x << ", " << outReflectiveNormal.y << ", " << outReflectiveNormal.z
+                  << bestNormal(0) << ", " << bestNormal(1) << ", " << bestNormal(2)
                   << "), score: " << bestScore << std::endl;
+                  
+        std::cout << "Returning largest axis on the symmetry plane: ("
+                  << outAxis.x << ", " << outAxis.y << ", " << outAxis.z
+                  << ")" << std::endl;
+                  
         return true;
     }
     
-    std::cout << "No reflective symmetry detected" << std::endl;
+    // If no symmetry detected, return the largest principal axis
+    outAxis = Vec3(
+        eigenVectorsWithValues[0].second(0),
+        eigenVectorsWithValues[0].second(1),
+        eigenVectorsWithValues[0].second(2)
+    );
+    
+    std::cout << "No reflective symmetry detected, returning largest principal axis" << std::endl;
     return false;
 }
 

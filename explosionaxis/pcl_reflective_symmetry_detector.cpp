@@ -9,10 +9,9 @@ using namespace VectorOps;
 
 SimplePCLReflectiveSymmetryDetector::SimplePCLReflectiveSymmetryDetector() {
 }
-
 bool SimplePCLReflectiveSymmetryDetector::detect(
     const std::vector<Vertex>& meshVertices,
-    Vec3& outReflectiveNormal) {
+    Vec3& outAxis) {
     
     if (meshVertices.empty()) {
         std::cout << "Empty mesh provided to detector" << std::endl;
@@ -49,53 +48,105 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
         return false;
     }
     
-    // First, try the principal planes (planes perpendicular to principal axes)
-    std::vector<Vec3> planeNormals;
-    planeNormals.push_back(Vec3(
-        eigensolver.eigenvectors()(0, 0),
-        eigensolver.eigenvectors()(1, 0),
-        eigensolver.eigenvectors()(2, 0)
-    ));
-    planeNormals.push_back(Vec3(
-        eigensolver.eigenvectors()(0, 1),
-        eigensolver.eigenvectors()(1, 1),
-        eigensolver.eigenvectors()(2, 1)
-    ));
-    planeNormals.push_back(Vec3(
-        eigensolver.eigenvectors()(0, 2),
-        eigensolver.eigenvectors()(1, 2),
-        eigensolver.eigenvectors()(2, 2)
-    ));
+    // 存储特征值和对应的特征向量
+    std::vector<std::pair<float, Vec3>> eigenVectorsWithValues;
     
-    // Normalize the plane normals
-    for (auto& normal : planeNormals) {
-        normal = normalize(normal);
+    // 获取三个特征向量和对应的特征值
+    for (int i = 0; i < 3; i++) {
+        Vec3 eigenvector(
+            eigensolver.eigenvectors()(0, i),
+            eigensolver.eigenvectors()(1, i),
+            eigensolver.eigenvectors()(2, i)
+        );
+        float eigenvalue = eigensolver.eigenvalues()(i);
+        eigenVectorsWithValues.push_back({eigenvalue, normalize(eigenvector)});
     }
     
-    // Try each plane with centroid as plane point
-    for (const auto& normal : planeNormals) {
-        if (checkSymmetryPlane(meshVertices, normal, centroid)) {
-            outReflectiveNormal = normal;
-            std::cout << "Detected reflective symmetry with normal: (" 
-                      << outReflectiveNormal.x << ", " << outReflectiveNormal.y << ", " << outReflectiveNormal.z 
+    // 按特征值大小降序排序
+    std::sort(eigenVectorsWithValues.begin(), eigenVectorsWithValues.end(),
+        [](const auto& a, const auto& b) { return a.first > b.first; });
+    
+    // 尝试使用特征向量作为平面法向量
+    for (int i = 0; i < 3; i++) {
+        Vec3 planeNormal = eigenVectorsWithValues[i].second;
+        if (checkSymmetryPlane(meshVertices, planeNormal, centroid)) {
+            // 找到对称平面，确定平面上的两个轴
+            // 平面由法向量定义，平面上的两个轴是垂直于法向量的
+            int normalIdx = i;
+            int axis1Idx = (normalIdx + 1) % 3;
+            int axis2Idx = (normalIdx + 2) % 3;
+            
+            // 选择平面上特征值较大的轴
+            if (eigenVectorsWithValues[axis1Idx].first > eigenVectorsWithValues[axis2Idx].first) {
+                outAxis = eigenVectorsWithValues[axis1Idx].second;
+            } else {
+                outAxis = eigenVectorsWithValues[axis2Idx].second;
+            }
+            
+            std::cout << "Detected reflective symmetry plane with normal: (" 
+                      << planeNormal.x << ", " << planeNormal.y << ", " << planeNormal.z 
                       << ")" << std::endl;
+                      
+            std::cout << "Returning larger axis on the symmetry plane: ("
+                      << outAxis.x << ", " << outAxis.y << ", " << outAxis.z
+                      << ")" << std::endl;
+                      
             return true;
         }
     }
     
-    // Try standard planes
+    // 尝试标准平面
     std::vector<Vec3> standardNormals = {
         Vec3(1, 0, 0),
         Vec3(0, 1, 0),
         Vec3(0, 0, 1)
     };
     
-    for (const auto& normal : standardNormals) {
-        if (checkSymmetryPlane(meshVertices, normal, centroid)) {
-            outReflectiveNormal = normal;
+    for (const auto& planeNormal : standardNormals) {
+        if (checkSymmetryPlane(meshVertices, planeNormal, centroid)) {
+            // 对于标准平面，我们需要确定平面上的两个轴
+            // 例如，如果法向量是(1,0,0)，那么平面上的轴是(0,1,0)和(0,0,1)
+            Vec3 axis1, axis2;
+            
+            if (std::abs(planeNormal.x) > 0.9f) {
+                // YZ平面
+                axis1 = Vec3(0, 1, 0);
+                axis2 = Vec3(0, 0, 1);
+            } else if (std::abs(planeNormal.y) > 0.9f) {
+                // XZ平面
+                axis1 = Vec3(1, 0, 0);
+                axis2 = Vec3(0, 0, 1);
+            } else {
+                // XY平面
+                axis1 = Vec3(1, 0, 0);
+                axis2 = Vec3(0, 1, 0);
+            }
+            
+            // 计算每个轴上的方差来确定较大的轴
+            float variance1 = 0.0f, variance2 = 0.0f;
+            
+            for (const auto& vertex : meshVertices) {
+                Vec3 v(vertex.x - centroid.x, vertex.y - centroid.y, vertex.z - centroid.z);
+                float proj1 = dot(v, axis1);
+                float proj2 = dot(v, axis2);
+                variance1 += proj1 * proj1;
+                variance2 += proj2 * proj2;
+            }
+            
+            variance1 /= meshVertices.size();
+            variance2 /= meshVertices.size();
+            
+            // 选择方差较大的轴
+            outAxis = (variance1 > variance2) ? axis1 : axis2;
+            
             std::cout << "Detected reflective symmetry with standard normal: (" 
-                      << outReflectiveNormal.x << ", " << outReflectiveNormal.y << ", " << outReflectiveNormal.z 
+                      << planeNormal.x << ", " << planeNormal.y << ", " << planeNormal.z 
                       << ")" << std::endl;
+                      
+            std::cout << "Returning larger axis on the symmetry plane: ("
+                      << outAxis.x << ", " << outAxis.y << ", " << outAxis.z
+                      << ")" << std::endl;
+                      
             return true;
         }
     }
@@ -147,7 +198,7 @@ bool SimplePCLReflectiveSymmetryDetector::checkSymmetryPlane(
               << " (" << (matchPercentage * 100) << "%)" << std::endl;
     
     // If enough matches, consider it symmetric
-    return (matchPercentage > 0.7f); // 70% threshold
+    return (matchPercentage > 0.5f); // 70% threshold
 }
 
 Vec3 SimplePCLReflectiveSymmetryDetector::reflectPointAcrossPlane(
