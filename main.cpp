@@ -292,7 +292,7 @@ int main()
 
         // if recalculation is required
         bool shouldRecalculate = recalculateExplosionAxis;
-        if (shouldRecalculate || lastStrategy != currentExplosionStrategy)
+        if (shouldRecalculate)
         {
             recalculateExplosionAxisAndView(
                 mesh, explosionAxis, currentExplosionStrategy, lastStrategy,

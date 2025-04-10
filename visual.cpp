@@ -344,7 +344,6 @@ void main() {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(IndexType),
                      mesh.indices.data(), GL_STATIC_DRAW);
     }
-
     void renderExplosionAxisGUI(std::string &currentStrategy)
     {
         ImGuiStyle &style = ImGui::GetStyle();
@@ -356,35 +355,36 @@ void main() {
         style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
         style.Colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
-
+    
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         ImVec2 viewportSize = viewport->Size;
         float panelWidth = 300.0f;
         float spacing = 10.0f;
         float panelY = spacing + ImGui::GetFrameHeight() + spacing + 150.0f;
-
+    
         if(panelFirstTime) {
             ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - spacing, panelY));
             ImGui::SetNextWindowSize(ImVec2(panelWidth, 0));    
         }
-
+    
         if (ImGui::Begin("Explosion Axis Settings"))
         {
             MC::ExplosionAxisConfig &config = MC::getExplosionAxisConfig();
             std::string currentInternalStrategy = MC::getCurrentExplosionStrategyName();
+            
             if (currentStrategy.empty())
             {
                 currentStrategy = MC::ExplosionAxisConfig::convertToUIName(currentInternalStrategy);
             }
-
+    
             std::vector<std::string> strategies = MC::ExplosionAxisConfig::getStrategyNames();
-
+    
             std::vector<const char *> strategyNames;
             for (const auto &strategy : strategies)
             {
                 strategyNames.push_back(strategy.c_str());
             }
-
+    
             int currentIndex = 0;
             for (size_t i = 0; i < strategies.size(); ++i)
             {
@@ -394,20 +394,21 @@ void main() {
                     break;
                 }
             }
-
+    
             static std::string previousStrategy = currentStrategy;
+            
             ImGui::Text("Custom Explosion Axis");
-
+    
             if (ImGui::Checkbox("Use Custom Axis", &config.useCustomExplosionAxis))
             {
                 if (!config.useCustomExplosionAxis)
                 {
-                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
+                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true; 
                 }
-
+    
                 MC::applyExplosionAxisConfig(config);
             }
-
+    
             if (config.useCustomExplosionAxis)
             {
                 // custom X, Y, Z axis control
@@ -415,18 +416,18 @@ void main() {
                 axisChanged |= ImGui::DragFloat("Axis X", &config.customExplosionAxis.x, 0.01f, -1.0f, 1.0f);
                 axisChanged |= ImGui::DragFloat("Axis Y", &config.customExplosionAxis.y, 0.01f, -1.0f, 1.0f);
                 axisChanged |= ImGui::DragFloat("Axis Z", &config.customExplosionAxis.z, 0.01f, -1.0f, 1.0f);
-
+    
                 if (axisChanged)
                 {
                     MC::applyExplosionAxisConfig(config);
                 }
-
+    
                 // calculate the axis vector length
                 float length = std::sqrt(
                     config.customExplosionAxis.x * config.customExplosionAxis.x +
                     config.customExplosionAxis.y * config.customExplosionAxis.y +
                     config.customExplosionAxis.z * config.customExplosionAxis.z);
-
+    
                 if (length > 0.0001f)
                 {
                     ImGui::Text("Normalized Axis: (%.2f, %.2f, %.2f)",
@@ -434,7 +435,7 @@ void main() {
                                 config.customExplosionAxis.y / length,
                                 config.customExplosionAxis.z / length);
                 }
-
+    
                 if (ImGui::Button("Apply Custom Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
                 {
                     if (length > 0.0001f)
@@ -443,13 +444,13 @@ void main() {
                             config.customExplosionAxis.x / length,
                             config.customExplosionAxis.y / length,
                             config.customExplosionAxis.z / length};
-
+    
                         config.customExplosionAxis = normalizedAxis;
-
+    
                         MC::applyExplosionAxisConfig(config);
-
+    
                         *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
-
+    
                         ImGui::TextColored(ImVec4(0.0f, 0.6f, 0.0f, 1.0f), "Custom axis applied!");
                     }
                     else
@@ -458,62 +459,62 @@ void main() {
                     }
                 }
             }
-
+    
             ImGui::Separator();
             ImGui::Text("Strategy Selection");
-
-            // create a drop-down selection box
+    
+            bool strategyChanged = false;
             if (ImGui::Combo("##Explosion Axis Strategy", &currentIndex, strategyNames.data(), static_cast<int>(strategyNames.size())))
             {
                 currentStrategy = strategies[currentIndex];
-
-                if (previousStrategy != currentStrategy)
-                {
-                    ImGui::Text("Selected: %s (Click 'Recalculate' to apply)", currentStrategy.c_str());
-                }
+                strategyChanged = (previousStrategy != currentStrategy);
             }
-
+    
+            if (strategyChanged)
+            {
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
+                                  "Strategy change will be applied when you click 'Recalculate'");
+            }
+    
             ImGui::Separator();
-
-            // check whether to display an error popup
+    
             static bool errorShown = false;
             bool shouldShowError = false;
             std::string errorMessage;
-
-            // generic test failure
-            if (!config.lastDetectionSuccessful)
+    
+            if (previousStrategy == currentStrategy && !config.lastDetectionSuccessful)
             {
                 ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f),
-                                   "No symmetry detected with current strategy!");
+                                  "No symmetry detected with current strategy!");
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                   "Using previous axis as fallback.");
+                                  "Using previous axis as fallback.");
                 ImGui::Separator();
-
+    
                 shouldShowError = true;
                 errorMessage = "No symmetry detected with the current strategy!\n\n"
-                               "Using previous axis as fallback.\n\n"
-                               "Try adjusting the parameters or selecting a different strategy.";
+                              "Using previous axis as fallback.\n\n"
+                              "Try adjusting the parameters or selecting a different strategy.";
             }
-
-            if (currentStrategy == "Rotational Symmetry")
+    
+            if (currentStrategy == "Rotational Symmetry" && previousStrategy == currentStrategy)
             {
                 ImGui::Text("Rotational Symmetry Parameters:");
-
+    
                 if (!config.rotationalDetectionSuccessful && config.lastDetectionSuccessful)
                 {
                     ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                       "No rotational symmetry detected in last analysis.");
-
+                                      "No rotational symmetry detected in last analysis.");
+    
                     shouldShowError = true;
                     errorMessage = "No rotational symmetry detected in last analysis.\n\n"
-                                   "Try adjusting the sample count or symmetry order,\n"
-                                   "or switch to a different strategy.";
+                                  "Try adjusting the sample count or symmetry order,\n"
+                                  "or switch to a different strategy.";
                 }
             }
+            
             ImGui::Text("Explosion Axis Visibility");
-
             ImGui::Checkbox("Show Explosion Axis", &showExplosionAxis);
-
+    
             if (shouldShowError && !errorShown)
             {
                 MC::showError("Symmetry Detection Failed", errorMessage);
@@ -523,35 +524,36 @@ void main() {
             {
                 errorShown = false;
             }
-
+    
             ImGui::Separator();
-
-            if (previousStrategy != currentStrategy && !config.useCustomExplosionAxis)
+    
+            if (!config.useCustomExplosionAxis)
             {
-                ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.0f, 1.0f),
-                                   "Strategy change will be applied when you click 'Recalculate'");
-            }
-
-            // add recalculate button (only shown if no custom axis is selected)
-            if (!config.useCustomExplosionAxis && ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
-            {
-                if (previousStrategy != currentStrategy)
+                if (ImGui::Button("Recalculate Explosion Axis", ImVec2(ImGui::GetWindowWidth() * 0.8f, 30)))
                 {
-                    std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
-                    config.strategyName = newInternalStrategy;
-                    MC::setExplosionStrategy(newInternalStrategy);
-                    MC::applyExplosionAxisConfig(config);
-                    previousStrategy = currentStrategy;
+                    if (previousStrategy != currentStrategy)
+                    {
+                        std::string newInternalStrategy = MC::ExplosionAxisConfig::convertToInternalName(currentStrategy);
+                        
+                        config.rotationalDetectionSuccessful = true;
+                        config.reflectiveDetectionSuccessful = true;
+                        config.lastDetectionSuccessful = true;
+                        
+                        config.strategyName = newInternalStrategy;
+                        MC::setExplosionStrategy(newInternalStrategy);
+                        MC::applyExplosionAxisConfig(config);
+                        
+                        previousStrategy = currentStrategy;
+                    }
+    
+                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
+                    errorShown = false;
                 }
-
-                // set the recalculation flag
-                *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
-                errorShown = false;
             }
         }
         ImGui::End();
         MC::renderErrorPopup();
-    } 
+    }
 
     void showError(const std::string &title, const std::string &message)
     {

@@ -392,6 +392,11 @@ void ExplosionAxisManager::setStrategy(const std::string& strategyName) {
     m_currentStrategy = ExplosionAxisStrategy::create(strategyName);
     m_config.strategyName = strategyName;
     
+    // 重置检测状态
+    m_config.rotationalDetectionSuccessful = true;
+    m_config.reflectiveDetectionSuccessful = true;
+    m_config.lastDetectionSuccessful = true;
+    
     // Apply the current configuration to the new strategy
     m_currentStrategy->applyConfig(m_config);
     
