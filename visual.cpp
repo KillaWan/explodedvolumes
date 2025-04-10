@@ -913,7 +913,7 @@ void main() {
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
 
-        // 使用当前的爆炸策略或默认策略
+        // Using current/default strategy
         std::string currentStrategy = "";
         renderExplosionAxisGUI(currentStrategy);
 
@@ -922,7 +922,7 @@ void main() {
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         ImGui::Begin("Explosion View Control", nullptr);
 
-        // 添加爆炸视图控制
+        // Added control
         if (ImGui::Checkbox("Explode Model at Cutting Planes", &showIntersections))
         {
             std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
@@ -933,7 +933,7 @@ void main() {
 
         if (showIntersections)
         {
-            // 计算当前爆炸距离的百分比用于显示
+            // Calculate percent for display
             float currentDistancePercent = (explodedView.explosionDistance / MAX_EXPLOSION_DISTANCE) * 100.0f;
             static bool firstRun = true;
             if (firstRun)
@@ -951,7 +951,7 @@ void main() {
             // Applying button
             if (ImGui::Button("Apply Distance"))
             {
-                // 应用临时值到实际使用的变量
+                // Applying temp values
                 g_explosionDistancePercent = tempExplosionPercent;
                 g_explosionDistance = (tempExplosionPercent / 100.0f) * MAX_EXPLOSION_DISTANCE;
             }
