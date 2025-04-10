@@ -139,10 +139,10 @@ void PostProcess::initQuad()
     glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
     
-    // 顶点属性 0: positions
+    // Attribute 0: positions
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // 顶点属性 1: texCoords
+    // Attribute 1: texCoords
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     
@@ -151,7 +151,7 @@ void PostProcess::initQuad()
 
 bool PostProcess::init(int screenWidth, int screenHeight)
 {
-    // 创建FBO
+    // FBO
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     
@@ -187,14 +187,14 @@ bool PostProcess::init(int screenWidth, int screenHeight)
 
 void PostProcess::render(int screenWidth, int screenHeight)
 {
-    // 清除屏幕
+    // Cleanup screen
     // glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
     
     glUseProgram(postProcessShader);
     
-    // 将场景纹理绑定到纹理单元0
+    // Bind texture to unit 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, sceneTexture);
     glUniform1i(glGetUniformLocation(postProcessShader, "scene"), 0);
@@ -211,7 +211,7 @@ void PostProcess::render(int screenWidth, int screenHeight)
 
 void PostProcess::resize(int screenWidth, int screenHeight)
 {
-    // 更新纹理和渲染缓冲区尺寸
+    // Update texture and size
     glBindTexture(GL_TEXTURE_2D, sceneTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     
