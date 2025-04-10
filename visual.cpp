@@ -891,7 +891,7 @@ void main() {
         float panel2Height = viewportSize.y * 0.45f;
         float panel3Height = viewportSize.y * 0.2f;
 
-        // 面板1：主控制
+        // Panel 1: Main control
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel1Height));
         
@@ -909,7 +909,7 @@ void main() {
         ImGui::Text("Current ISO: %.1f", isoLevel);
         ImGui::End();
 
-        // 面板2：爆炸轴设置
+        // Panel 2: Explosion axis
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, panelSpacing * 2 + panel1Height));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel2Height));
 
@@ -917,7 +917,7 @@ void main() {
         std::string currentStrategy = "";
         renderExplosionAxisGUI(currentStrategy);
 
-        // 面板3：爆炸视图控制
+        // Panel 3: Explosion views
         ImGui::SetNextWindowPos(ImVec2(viewportSize.x - panelWidth - panelSpacing, viewportSize.y - panel3Height - panelSpacing));
         ImGui::SetNextWindowSize(ImVec2(panelWidth, panel3Height));
         ImGui::Begin("Explosion View Control", nullptr);
@@ -928,8 +928,8 @@ void main() {
             std::cout << "Model explosion: " << (showIntersections ? "ON" : "OFF") << std::endl;
         }
 
-        // 爆炸距离控制
-        const float MAX_EXPLOSION_DISTANCE = 40.0f; // 最大爆炸距离
+        // Distance control
+        const float MAX_EXPLOSION_DISTANCE = 40.0f; // Maximum distance
 
         if (showIntersections)
         {
@@ -942,13 +942,13 @@ void main() {
                 firstRun = false;
             }
 
-            // 滑块控制临时值
+            // Temporary values
             if (ImGui::SliderFloat("Explosion Distance", &tempExplosionPercent, 0.0f, 100.0f, "%.1f%%"))
             {
-                // 不立即应用，等用户点击按钮确认
+                // Waiting for user
             }
 
-            // 应用按钮
+            // Applying button
             if (ImGui::Button("Apply Distance"))
             {
                 // 应用临时值到实际使用的变量
@@ -979,7 +979,7 @@ void main() {
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 白色背景
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // 视口大小
+        // Window Size
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (height != 0) ? (float)width / height : 1.0f;
