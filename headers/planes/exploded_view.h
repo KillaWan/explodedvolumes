@@ -12,7 +12,7 @@ namespace MC
 {
     struct ExplodedSegment
     {
-        std::vector<Vertex> vertices; 
+        std::vector<Vertex> vertices;
         std::vector<IndexType> indices;
         Vec3 center;
         Vec3 displacement;
@@ -46,5 +46,4 @@ namespace MC
     void updateSegmentMesh(ExplodedSegment &segment);
 
     void cleanupExplodedView(ExplodedView &explodedView);
-
-} 
+}

@@ -1,5 +1,5 @@
 #include "planes/exploded_view.h"
-#include "planes/cutting_planes.h" // 引入切割平面定义，可使用其中的interpolateVertex函数
+#include "planes/cutting_planes.h"
 #include <algorithm>
 #include <iostream>
 #include <unordered_map>
@@ -12,10 +12,9 @@
 
 namespace MC
 {
-    // 声明外部函数
     extern float pointToPlaneDistance(const Vertex &v, const CuttingPlane &plane);
     extern Vertex interpolateVertex(const Vertex &v1, const Vertex &v2, float t);
-    // 顶点哈希结构 - 用于快速查找顶点
+    // Vertex hash structure - for fast vertex lookups
     struct VertexHash
     {
         float epsilon;
@@ -24,18 +23,14 @@ namespace MC
 
         size_t operator()(const Vertex &v) const
         {
-            // 将坐标量化以减少浮点误差影响
             int x = static_cast<int>(v.x / epsilon);
             int y = static_cast<int>(v.y / epsilon);
             int z = static_cast<int>(v.z / epsilon);
 
-            // 使用空间哈希函数组合坐标
-            // 这些质数有助于减少哈希冲突
             return static_cast<size_t>(x * 73856093 ^ y * 19349663 ^ z * 83492791);
         }
     };
 
-    // 顶点近似相等判断
     struct VertexEqual
     {
         float epsilon;
@@ -50,16 +45,13 @@ namespace MC
         }
     };
 
-    // 计算点到平面的有符号距离 - 使用已有的pointToPlaneDistance函数
+    // calculate the signed distance from a point to a plane
     float signedDistanceToPlane(const Vertex &vertex, const CuttingPlane &plane)
     {
         return pointToPlaneDistance(vertex, plane);
     }
 
-    // 不再定义interpolateVertex函数，而是使用cutting_planes.cpp中的版本
-    // Vertex interpolateVertex(const Vertex& v1, const Vertex& v2, float t) 函数在cutting_planes.cpp中已定义
-
-    // 三角形切割函数 - 将一个三角形根据平面切割成多个三角形并分配到两侧
+    // triangle cut function
     void cutTriangleByPlane(
         const Vertex &v0, const Vertex &v1, const Vertex &v2,
         const CuttingPlane &plane,
@@ -70,15 +62,12 @@ namespace MC
         std::unordered_map<Vertex, size_t, VertexHash, VertexEqual> &positiveVertexMap,
         std::unordered_map<Vertex, size_t, VertexHash, VertexEqual> &negativeVertexMap)
     {
-        // 计算每个顶点到平面的有符号距离
         float d0 = signedDistanceToPlane(v0, plane);
         float d1 = signedDistanceToPlane(v1, plane);
         float d2 = signedDistanceToPlane(v2, plane);
 
-        // 定义一个小的epsilon值，用于判断顶点是否在平面上
         const float epsilon = 1e-6f;
 
-        // 确定每个顶点相对于平面的位置
         bool v0Positive = d0 > epsilon;
         bool v1Positive = d1 > epsilon;
         bool v2Positive = d2 > epsilon;
@@ -89,7 +78,6 @@ namespace MC
         int positiveCount = (v0Positive ? 1 : 0) + (v1Positive ? 1 : 0) + (v2Positive ? 1 : 0);
         int onPlaneCount = (v0OnPlane ? 1 : 0) + (v1OnPlane ? 1 : 0) + (v2OnPlane ? 1 : 0);
 
-        // 添加顶点到相应的集合，并返回索引
         auto addVertexToCollection = [](
                                          const Vertex &v,
                                          std::vector<Vertex> &vertices,
@@ -107,10 +95,9 @@ namespace MC
             return index;
         };
 
-        // 处理不同的情况
         if (onPlaneCount == 3 || (positiveCount == 0 && onPlaneCount == 0) || (positiveCount == 3))
         {
-            // 1. 三角形完全在平面上，或者完全在一侧
+            // 1. triangles are completely in the plane, or completely on one side
             const std::vector<Vertex> &verts = {v0, v1, v2};
             auto &targetVertices = (positiveCount > 0 || onPlaneCount == 3) ? positiveVertices : negativeVertices;
             auto &targetIndices = (positiveCount > 0 || onPlaneCount == 3) ? positiveIndices : negativeIndices;
@@ -128,8 +115,7 @@ namespace MC
             return;
         }
 
-        // 2. 三角形被平面切割
-        // 将顶点按照其相对于平面的位置分类
+        // 2. triangles cut by planes
         std::vector<Vertex> posVerts, negVerts, onPlaneVerts;
         std::vector<int> posIndices, negIndices, onPlaneIndices;
 
@@ -181,7 +167,7 @@ namespace MC
             negIndices.push_back(2);
         }
 
-        // 计算平面与三角形边的交点
+        // calculate the intersection of the plane with the sides of the triangle
         std::vector<Vertex> intersections;
 
         auto calculateIntersection = [&](const Vertex &va, const Vertex &vb, float da, float db)
@@ -210,7 +196,7 @@ namespace MC
             calculateIntersection(v2, v0, d2, d0);
         }
 
-        // 移除重复的交点
+        // remove duplicate intersections
         if (intersections.size() > 1)
         {
             for (size_t i = 0; i < intersections.size(); ++i)
@@ -229,16 +215,14 @@ namespace MC
             }
         }
 
-        // 合并平面上的点和交点
+        // combine points and intersections in the plane
         for (const auto &v : onPlaneVerts)
         {
             intersections.push_back(v);
         }
 
-        // 确保至少有两个交点
         if (intersections.size() < 2)
         {
-            // 可能是精度问题导致的边缘情况，将完整三角形分配到一侧
             const std::vector<Vertex> &verts = {v0, v1, v2};
             auto &targetVertices = (positiveCount >= 2) ? positiveVertices : negativeVertices;
             auto &targetIndices = (positiveCount >= 2) ? positiveIndices : negativeIndices;
@@ -256,17 +240,15 @@ namespace MC
             return;
         }
 
-        // 根据交点和分类的顶点生成新的三角形
-        // 1. Positive side
+        // fenerate new triangles based on intersections and classified vertices
+
         if (!posVerts.empty() || !onPlaneVerts.empty())
         {
             std::vector<Vertex> allPosVerts(posVerts);
             allPosVerts.insert(allPosVerts.end(), intersections.begin(), intersections.end());
 
-            // 简化处理：假设顶点数目较少，可以直接生成三角形
             if (allPosVerts.size() == 3)
             {
-                // 一个简单的三角形
                 size_t idx0 = addVertexToCollection(allPosVerts[0], positiveVertices, positiveVertexMap);
                 size_t idx1 = addVertexToCollection(allPosVerts[1], positiveVertices, positiveVertexMap);
                 size_t idx2 = addVertexToCollection(allPosVerts[2], positiveVertices, positiveVertexMap);
@@ -277,26 +259,20 @@ namespace MC
             }
             else if (allPosVerts.size() == 4)
             {
-                // 一个四边形，需要分成两个三角形
                 size_t idx0 = addVertexToCollection(allPosVerts[0], positiveVertices, positiveVertexMap);
                 size_t idx1 = addVertexToCollection(allPosVerts[1], positiveVertices, positiveVertexMap);
                 size_t idx2 = addVertexToCollection(allPosVerts[2], positiveVertices, positiveVertexMap);
                 size_t idx3 = addVertexToCollection(allPosVerts[3], positiveVertices, positiveVertexMap);
 
-                // 三角形1
                 positiveIndices.push_back(idx0);
                 positiveIndices.push_back(idx1);
                 positiveIndices.push_back(idx2);
 
-                // 三角形2
                 positiveIndices.push_back(idx0);
                 positiveIndices.push_back(idx2);
                 positiveIndices.push_back(idx3);
             }
-            // 可以根据需要扩展处理更复杂的多边形
         }
-
-        // 2. Negative side
         if (!negVerts.empty() || !onPlaneVerts.empty())
         {
             std::vector<Vertex> allNegVerts(negVerts);
@@ -304,7 +280,6 @@ namespace MC
 
             if (allNegVerts.size() == 3)
             {
-                // 一个简单的三角形
                 size_t idx0 = addVertexToCollection(allNegVerts[0], negativeVertices, negativeVertexMap);
                 size_t idx1 = addVertexToCollection(allNegVerts[1], negativeVertices, negativeVertexMap);
                 size_t idx2 = addVertexToCollection(allNegVerts[2], negativeVertices, negativeVertexMap);
@@ -315,27 +290,23 @@ namespace MC
             }
             else if (allNegVerts.size() == 4)
             {
-                // 一个四边形，需要分成两个三角形
                 size_t idx0 = addVertexToCollection(allNegVerts[0], negativeVertices, negativeVertexMap);
                 size_t idx1 = addVertexToCollection(allNegVerts[1], negativeVertices, negativeVertexMap);
                 size_t idx2 = addVertexToCollection(allNegVerts[2], negativeVertices, negativeVertexMap);
                 size_t idx3 = addVertexToCollection(allNegVerts[3], negativeVertices, negativeVertexMap);
 
-                // 三角形1
                 negativeIndices.push_back(idx0);
                 negativeIndices.push_back(idx1);
                 negativeIndices.push_back(idx2);
 
-                // 三角形2
                 negativeIndices.push_back(idx0);
                 negativeIndices.push_back(idx2);
                 negativeIndices.push_back(idx3);
             }
-            // 可以根据需要扩展处理更复杂的多边形
         }
     }
 
-    // Segment center
+    // Calculate the center point of the segment
     Vec3 computeSegmentCenter(const ExplodedSegment &segment)
     {
         if (segment.vertices.empty())
@@ -359,7 +330,7 @@ namespace MC
         return center;
     }
 
-    // 优化的计算爆炸视图函数 - 实现真正的网格切割
+    // Mesh Cutting
     ExplodedView computeExplodedView(
         const Mesh &mesh,
         const std::vector<CuttingPlane> &planes,
@@ -372,7 +343,6 @@ namespace MC
         // Start timing
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        // 如果没有切割平面，则整个模型作为一个片段
         if (planes.empty())
         {
             ExplodedSegment segment;
@@ -383,13 +353,11 @@ namespace MC
 
             result.segments.push_back(segment);
 
-            // 设置OpenGL缓冲
             setupSegmentMesh(segment);
 
             return result;
         }
 
-        // 对切割平面按照在爆炸轴上的位置排序
         std::vector<std::pair<float, size_t>> sortedPlaneIndices;
         sortedPlaneIndices.reserve(planes.size());
 
