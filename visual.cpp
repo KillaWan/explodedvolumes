@@ -102,24 +102,24 @@ void main() {
         ImVec4 *colors = style.Colors;
 
         // configure colors and style
-        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);         // 白色背景
-        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // 黑色文字
-        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);          // 浅灰色标题背景
-        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 较深的灰色活动标题
-        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色按钮
-        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
-        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
-        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);       // 非常浅的灰色框架背景
-        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);        // 深灰色复选标记
-        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);       // 灰色滑块抓取
-        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 活动时较深的滑块
-        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);   // 悬停时浅灰色框架
-        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f); // 活动时稍深
-        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);           // 浅灰色标头
-        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);    // 悬停时稍深
-        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);     // 活动时更深
-        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);        // 灰色分隔符
-        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);          // 白色弹出背景
+        colors[ImGuiCol_WindowBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        colors[ImGuiCol_Button] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_ButtonHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_FrameBg] = ImVec4(0.95f, 0.95f, 0.95f, 1.0f);
+        colors[ImGuiCol_CheckMark] = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        colors[ImGuiCol_Header] = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        colors[ImGuiCol_Separator] = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+        colors[ImGuiCol_PopupBg] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
         style.WindowPadding = ImVec2(12.0f, 12.0f);
         style.FramePadding = ImVec2(6.0f, 4.0f);
@@ -134,7 +134,7 @@ void main() {
         style.GrabRounding = 3.0f;
         style.TabRounding = 4.0f;
 
-        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
     }
 
     // calculate viewport size
@@ -230,11 +230,11 @@ void main() {
         // adjust camera distance with + and - keys
         if (key == GLFW_KEY_EQUAL && (action == GLFW_PRESS || action == GLFW_REPEAT))
         {
-            camera.distance *= 0.9f; // 拉近
+            camera.distance *= 0.9f; //Scroll in
         }
         if (key == GLFW_KEY_MINUS && (action == GLFW_PRESS || action == GLFW_REPEAT))
         {
-            camera.distance *= 1.1f; // 拉远
+            camera.distance *= 1.1f; //Scroll out
         }
     }
 
@@ -402,7 +402,7 @@ void main() {
             {
                 if (!config.useCustomExplosionAxis)
                 {
-                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true; // 触发重新计算
+                    *reinterpret_cast<bool *>(ImGui::GetIO().UserData) = true;
                 }
 
                 MC::applyExplosionAxisConfig(config);
