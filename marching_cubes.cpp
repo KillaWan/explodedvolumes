@@ -61,7 +61,7 @@ namespace MC
         0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
         0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0};
 
-    // Triangle table for Marching Cubes (注意：这里只展示了部分内容，完整表格非常大)
+    // Triangle table for Marching Cubes
     const int triTable[256][16] = {{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
                                           {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
                                           {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -319,7 +319,7 @@ namespace MC
                                           {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
                                           {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}};
 
-    // 处理单个立方体的Marching Cubes算法
+    // Marching Cubes for one cube
     void polygoniseCube(const float *volume, const int dims[3],
                         int cellX, int cellY, int cellZ,
                         float isoLevel,
@@ -328,7 +328,7 @@ namespace MC
         float cubeValues[8];
         Vec3 cubePos[8];
 
-        // 获取立方体的值和位置
+        // Get value of cube
         for (int i = 0; i < 8; i++)
         {
             Vec3 offset = cubeCornerOffsets[i];
@@ -336,20 +336,20 @@ namespace MC
             int y = cellY + static_cast<int>(offset.y);
             int z = cellZ + static_cast<int>(offset.z);
 
-            // 边界检查以避免段错误
+            // Check for boundary
             if (x >= 0 && x < dims[0] && y >= 0 && y < dims[1] && z >= 0 && z < dims[2])
             {
                 cubeValues[i] = getVolumeValue(volume, x, y, z, dims);
             }
             else
             {
-                cubeValues[i] = 0.0f; // 默认值
+                cubeValues[i] = 0.0f; // Default
             }
 
             cubePos[i] = Vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
         }
 
-        // 确定立方体配置索引
+        // Get value
         int cubeIndex = 0;
         if (cubeValues[0] < isoLevel)
             cubeIndex |= 1;
@@ -368,12 +368,12 @@ namespace MC
         if (cubeValues[7] < isoLevel)
             cubeIndex |= 128;
 
-        // 查询边表
+        // Lookup for table
         int edges = edgeTable[cubeIndex];
         if (edges == 0)
             return;
 
-        // 计算边的交点
+        // Calculate interpolation
         Vec3 vertList[12];
         if (edges & 1)
             vertList[0] = interpolate(isoLevel, cubePos[0], cubePos[1], cubeValues[0], cubeValues[1]);
@@ -400,7 +400,7 @@ namespace MC
         if (edges & 2048)
             vertList[11] = interpolate(isoLevel, cubePos[3], cubePos[7], cubeValues[3], cubeValues[7]);
 
-        // 根据三角形表生成三角形
+        // Generate triangles per table
         for (int i = 0; triTable[cubeIndex][i] != -1; i += 3)
         {
             int idx0 = triTable[cubeIndex][i + 0];
@@ -412,12 +412,12 @@ namespace MC
         }
     }
 
-    // 应用完整的Marching Cubes算法生成网格
+    // Marching Cubes generating meshes
     void generateMesh(const VolumeData &volume, float isoLevel, Mesh &mesh)
     {
         std::vector<Vec3> triangles;
 
-        // 估计容量以避免频繁重新分配
+        // Estimate memory
         triangles.reserve(volume.dims[0] * volume.dims[1] * volume.dims[2] / 4);
 
         for (int z = 0; z < volume.dims[2] - 1; z++)
@@ -429,7 +429,7 @@ namespace MC
                     polygoniseCube(volume.data.get(), volume.dims, x, y, z, isoLevel, triangles);
                 }
             }
-            // 报告大型数据集的进度
+            // Reporting progress
             if (volume.dims[2] > 50 && z % (volume.dims[2] / 10) == 0)
             {
                 std::cout << "Marching Cubes progress: " << (z * 100 / volume.dims[2]) << "%" << std::endl;
@@ -438,15 +438,15 @@ namespace MC
 
         std::cout << "Generated " << triangles.size() / 3 << " triangles" << std::endl;
 
-        // 重置网格数据
+        // Reset mesh
         mesh.vertices.clear();
         mesh.indices.clear();
 
-        // 为网格分配内存
+        // Allocate mesh
         mesh.vertices.reserve(triangles.size());
         mesh.indices.reserve(triangles.size());
 
-        // 填充顶点和索引
+        // Filling vertices and indices
         for (size_t i = 0; i < triangles.size(); i++)
         {
             Vertex v;
@@ -457,7 +457,7 @@ namespace MC
             mesh.indices.push_back(static_cast<IndexType>(i));
         }
 
-        // 计算网格边界
+        // Calculate boundary
         calculateMeshBounds(mesh.vertices, mesh.min_bounds, mesh.max_bounds, mesh.center);
         mesh.max_dimension = std::max({mesh.max_bounds.x - mesh.min_bounds.x,
                                        mesh.max_bounds.y - mesh.min_bounds.y,
