@@ -1,6 +1,6 @@
 #include "headers/data.h"
-#include "nifti1_io.h"   // NIfTI库
-#include "file_dialog.h" // 文件对话框
+#include "nifti1_io.h"
+#include "file_dialog.h"
 
 
 namespace MC
