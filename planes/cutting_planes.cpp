@@ -148,7 +148,7 @@ namespace MC
         PlaneIntersection intersection;
         intersection.visible = false;
 
-        // 检查网格是否有效
+        // Check valid
         if (mesh.vertices.empty() || mesh.indices.empty())
         {
             std::cerr << "Empty mesh, cannot compute plane intersections" << std::endl;
@@ -166,15 +166,15 @@ namespace MC
             const CuttingPlane &plane = planes[planeIdx];
             std::vector<IntersectionSegment> localSegments;
 
-            // 遍历所有三角形
+            // Iterate over triangles
             for (size_t i = 0; i < mesh.indices.size(); i += 3)
             {
-                // 获取三角形的三个顶点
+                // Get vertices
                 const Vertex &v0 = mesh.vertices[mesh.indices[i]];
                 const Vertex &v1 = mesh.vertices[mesh.indices[i + 1]];
                 const Vertex &v2 = mesh.vertices[mesh.indices[i + 2]];
 
-                // 检查三角形与平面的交线
+                // Check intersection
                 IntersectionSegment segment;
                 if (trianglePlaneIntersection(v0, v1, v2, plane, segment))
                 {
@@ -208,7 +208,7 @@ namespace MC
         unsigned int &VBO)
     {
 
-        // 生成VAO和VBO
+        // VAO and VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
@@ -222,7 +222,7 @@ namespace MC
             lineVertices.push_back(segment.end);
         }
 
-        // 绑定并填充VBO
+        // Bind and buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(Vertex),
                      lineVertices.data(), GL_STATIC_DRAW);

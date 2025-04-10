@@ -257,7 +257,7 @@ namespace MC
         }
 
         // 根据交点和分类的顶点生成新的三角形
-        // 1. 正侧
+        // 1. Positive side
         if (!posVerts.empty() || !onPlaneVerts.empty())
         {
             std::vector<Vertex> allPosVerts(posVerts);
@@ -296,7 +296,7 @@ namespace MC
             // 可以根据需要扩展处理更复杂的多边形
         }
 
-        // 2. 负侧
+        // 2. Negative side
         if (!negVerts.empty() || !onPlaneVerts.empty())
         {
             std::vector<Vertex> allNegVerts(negVerts);
@@ -335,7 +335,7 @@ namespace MC
         }
     }
 
-    // 计算段的中心点
+    // Segment center
     Vec3 computeSegmentCenter(const ExplodedSegment &segment)
     {
         if (segment.vertices.empty())
@@ -369,7 +369,7 @@ namespace MC
         ExplodedView result;
         result.explosionDistance = explosionDistance;
 
-        // 计时开始
+        // Start timing
         auto startTime = std::chrono::high_resolution_clock::now();
 
         // 如果没有切割平面，则整个模型作为一个片段
