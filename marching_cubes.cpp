@@ -4,7 +4,7 @@
 namespace MC
 {
 
-    // 插值函数
+    // Interpolation
     Vec3 interpolate(float isoLevel, const Vec3 &p1, const Vec3 &p2, float valp1, float valp2)
     {
         if (std::fabs(isoLevel - valp1) < 1e-5f)
@@ -20,7 +20,7 @@ namespace MC
             p1.z + mu * (p2.z - p1.z));
     }
 
-    // Marching Cubes查找表
+    // Marching Cubes Lookup tables
     // Cube corner offsets
     const Vec3 cubeCornerOffsets[8] = {
         Vec3(0, 0, 0), Vec3(1, 0, 0), Vec3(1, 1, 0), Vec3(0, 1, 0),
