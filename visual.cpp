@@ -1060,7 +1060,7 @@ void main() {
         }
     }
 
-    // 设置ImGui
+    // ImGui
     void setupImGui(GLFWwindow *window)
     {
         IMGUI_CHECKVERSION();
@@ -1111,7 +1111,7 @@ void main() {
         style.TabRounding = 4.0f;
 
         // 窗口标题对齐
-        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // 居中标题
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f); // Centered
 
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330");
@@ -1125,13 +1125,13 @@ void main() {
         ImGui::DestroyContext();
     }
 
-    // 初始化OpenGL
+    // Initalize OpenGL
     GLFWwindow *initOpenGL()
     {
-        // 初始化GLFW
+        // Initalize GLFW
         if (!glfwInit())
         {
-            std::cerr << "GLFW初始化失败\n";
+            std::cerr << "GLFW initialization failed\n";
             return nullptr;
         }
 
