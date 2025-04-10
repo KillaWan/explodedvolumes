@@ -377,7 +377,6 @@ namespace MC
             segments[i].startIndex = segmentStartIndices[i];
             segments[i].indexCount = segmentTriangleCounts[i] * 3;
 
-            // 计算位移
             float displacement = (i - fixedSegmentIndex) * explodeDistance;
             segments[i].displacement.x = explosionAxis.x * displacement;
             segments[i].displacement.y = explosionAxis.y * displacement;
