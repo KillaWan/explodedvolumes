@@ -616,7 +616,7 @@ void main() {
         glfwGetFramebufferSize(window, &width, &height);
 
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -806,7 +806,8 @@ void main() {
         float &tempIsoLevel,
         const VolumeData &volumeData,
         unsigned int axisVAO,
-        unsigned int lineShaderProgram)
+        unsigned int lineShaderProgram,
+        PostProcess &postProcessor)
     {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -903,11 +904,14 @@ void main() {
 
         ImGui::End();
 
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
+
+        // render toFBO
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         float aspect = (height != 0) ? (float)width / height : 1.0f;
 
         glm::mat4 model(1.0f);
@@ -957,27 +961,24 @@ void main() {
             }
         }
 
-        // render ImGui
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
         if (showExplosionAxis)
         {
             glUseProgram(lineShaderProgram);
-
-            int axisModelLoc = glGetUniformLocation(lineShaderProgram, "model");
-            int axisViewLoc = glGetUniformLocation(lineShaderProgram, "view");
-            int axisProjLoc = glGetUniformLocation(lineShaderProgram, "projection");
-            glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
+            glUniformMatrix4fv(glGetUniformLocation(lineShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glUniformMatrix4fv(glGetUniformLocation(lineShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(glGetUniformLocation(lineShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
             glLineWidth(20.0f);
-
             glBindVertexArray(axisVAO);
             glDrawArrays(GL_LINES, 0, 2);
             glBindVertexArray(0);
         }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        postProcessor.render(width, height);
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        panelFirstTime = false;
     }
 
     // set up ImGui
@@ -1085,7 +1086,7 @@ void main() {
             return nullptr;
         }
         glEnable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
+        // glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
 
         return window;

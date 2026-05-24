@@ -3,6 +3,7 @@
 #include "data.h"
 #include "post_processor.h"
 #include "planes/exploded_view.h"
+#include "post_processor.h"
 
 struct GLFWwindow;
 
@@ -54,7 +55,8 @@ namespace MC
         float &tempIsoLevel,
         const VolumeData &volumeData,
         unsigned int axisVAO,
-        unsigned int lineShaderProgram);
+        unsigned int lineShaderProgram,
+        PostProcess &postProcessor);
 
     // ui
     void setupImGui(GLFWwindow *window);

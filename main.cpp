@@ -278,7 +278,7 @@ int main()
         else
         {
             renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData,
-                               axisVAO, lineShaderProgram);
+                               axisVAO, lineShaderProgram, postProcessor);
         }
 
         // explosion distance update after being controlled by ui
