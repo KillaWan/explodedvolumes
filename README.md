@@ -1,5 +1,7 @@
 # ExplodedVolumes
 
+![Introduction](images/Screenshot_20240130_115627.png)
+
 **ExplodedVolumes** is a C++17/OpenGL application for interactive visualization of volumetric data. It loads NIfTI volume data, extracts an iso-surface with Marching Cubes, computes or selects an explosion axis, constructs cutting planes, separates the resulting components, and renders the result in both normal and exploded-view modes.
 
 The project is designed as a source-only archive and as a course project of TU Eindhoven. Third-party headers and platform-specific binary libraries are intentionally not bundled. Before compiling, each user must reconstruct the local dependency folder using libraries that match their operating system, CPU architecture, and compiler toolchain.
