@@ -9,7 +9,7 @@ The project is designed as a source-only archive and as a course project of TU E
 ## Table of Contents
 
 - [1. Project Context](#1-project-context)
-- [2. Figure Placeholders](#2-figure-placeholders)
+- [2. Results](#2-results)
 - [3. Functional Overview](#3-functional-overview)
 - [4. Methodological Pipeline](#4-methodological-pipeline)
 - [5. Source Tree](#5-source-tree)
@@ -44,43 +44,24 @@ In this implementation, the input is a scientific or medical volume stored in NI
 
 ---
 
-## 2. Figure Placeholders
+## 2. Results
 
-The following locations are reserved for figures. Replace the placeholder paths with screenshots or diagrams before final submission or publication.
+### Main Interface
 
-### Figure 1. Overall result teaser
+![Main Interface](images/Iguana_1.png)
 
-Suggested content: a side-by-side comparison of the original iso-surface, cutting-plane configuration, and final exploded view.
+*Main window with Marching Cubes control panel, explosion axis settings, and explosion view controls*
 
-<!--
-![Figure 1. Original and exploded views of the same volume.](docs/images/figure1_result_teaser.png)
--->
+### Exploded View
 
-### Figure 2. Computational pipeline
+| Normal View | Exploded View |
+|:-----------:|:-------------:|
+| ![Iguana Normal](images/Iguana_1.png) | ![Iguana Exploded](images/Iguana_2.png) |
+| ![nchris_t1 Normal](images/nchris_t1_1.png) | ![nchris_t1 Exploded](images/nchris_t1_2.png) |
+| ![CT_Abdo Normal](images/CT_Abdo_1.png) | ![CT_Abdo Exploded](images/CT_Abdo_2.png) |
+| ![CT_Philips Normal](images/CT_Philips_1.png) | ![CT_Philips Exploded](images/CT_Philips_2.png) |
 
-Suggested content: NIfTI volume → Marching Cubes → explosion-axis estimation → cutting-plane generation → surface segmentation → exploded rendering.
-
-<!--
-![Figure 2. Computational pipeline of ExplodedVolumes.](docs/images/figure2_pipeline.png)
--->
-
-### Figure 3. User interface and interaction
-
-Suggested content: a screenshot of the OpenGL viewport and the ImGui control panels.
-
-<!--
-![Figure 3. User interface with iso-level, axis, and explosion controls.](docs/images/figure3_interface.png)
--->
-
-### Figure 4. Dependency reconstruction model
-
-Suggested content: a small diagram showing the source-only repository, the local dependency folder, and the separate Windows/macOS binary libraries.
-
-<!--
-![Figure 4. Source-only distribution and platform-specific dependency reconstruction.](docs/images/figure4_dependency_model.png)
--->
-
----
+*Comparison between normal rendering (left) and exploded view (right) for multiple datasets*
 
 ## 3. Functional Overview
 
