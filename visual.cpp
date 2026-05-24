@@ -713,9 +713,9 @@ void main() {
         }
 
         ImGui::End();
-
+        /* Duplicate
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());*/
 
         glfwGetFramebufferSize(window, &width, &height);
         float aspect = (height != 0) ? (float)width / height : 1.0f;
@@ -776,7 +776,7 @@ void main() {
 
         // render ImGui
         ImGui::Render();
-
+        /* Duplicate
         // draw the axis only when showExplosionAxis is true
         if (showExplosionAxis)
         {
@@ -793,7 +793,7 @@ void main() {
             glBindVertexArray(axisVAO);
             glDrawArrays(GL_LINES, 0, 2);
             glBindVertexArray(0);
-        }
+        }*/
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         panelFirstTime = false;
     }
