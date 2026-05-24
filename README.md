@@ -689,7 +689,7 @@ brew --prefix libomp
 
 Then update the Makefile variables or direct build paths accordingly.
 
-### `make: *** No targets specified and no makefile found`
+### `make: No targets specified and no makefile found`
 
 The Makefile-based instructions apply only to source variants that contain a Makefile. If the local copy does not include one, use the direct build fallback in [Section 8.3](#83-macos-direct-build-fallback).
 
