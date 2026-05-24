@@ -614,7 +614,10 @@ void main() {
     {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-
+        if (width<=0||height<=0)
+        {
+            return;
+        }
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -906,7 +909,10 @@ void main() {
 
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-
+        if(width<=0||height<=0)
+        {
+            return;
+        }
         // render toFBO
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
