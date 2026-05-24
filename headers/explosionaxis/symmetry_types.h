@@ -5,19 +5,19 @@
 
 namespace MC {
 
-// 对称类型枚举
+// define symmetry types
 enum class SymmetryType {
-    None,           // 没有检测到对称
-    Rotational,     // 检测到旋转对称
-    Reflective      // 检测到镜面对称
+    None,           // no symmetry detected
+    Rotational,     // rotational symmetry detected
+    Reflective      // reflective symmetry detected
 };
 
-// 对称检测结果结构
+// symmetry detection result structure
 struct SymmetryResult {
     SymmetryType type;
-    int symmetryOrder;      // 旋转对称阶数（如果 type = Rotational）
-    Vec3 rotationAxis;      // 旋转对称轴
-    Vec3 reflectiveNormal;  // 镜面对称的平面法向（如果 type = Reflective）
+    int symmetryOrder;      // rotational symmetry order (if type = Rotational)
+    Vec3 rotationAxis;      // rotational symmetry axis
+    Vec3 reflectiveNormal;  // reflective symmetry plane normal (if type = Reflective)
 };
 
 } // namespace MC

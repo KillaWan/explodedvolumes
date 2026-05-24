@@ -48,10 +48,10 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
         return false;
     }
     
-    // 存储特征值和对应的特征向量
+    // store eigenvectors and their corresponding eigenvalues
     std::vector<std::pair<float, Vec3>> eigenVectorsWithValues;
     
-    // 获取三个特征向量和对应的特征值
+    // store eigenvectors and their corresponding eigenvalues
     for (int i = 0; i < 3; i++) {
         Vec3 eigenvector(
             eigensolver.eigenvectors()(0, i),
@@ -62,21 +62,20 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
         eigenVectorsWithValues.push_back({eigenvalue, normalize(eigenvector)});
     }
     
-    // 按特征值大小降序排序
+    // sort by eigenvalue magnitude (descending)
     std::sort(eigenVectorsWithValues.begin(), eigenVectorsWithValues.end(),
         [](const auto& a, const auto& b) { return a.first > b.first; });
     
-    // 尝试使用特征向量作为平面法向量
+    // try the eigenvectors as potential symmetry plane normals
     for (int i = 0; i < 3; i++) {
         Vec3 planeNormal = eigenVectorsWithValues[i].second;
         if (checkSymmetryPlane(meshVertices, planeNormal, centroid)) {
-            // 找到对称平面，确定平面上的两个轴
-            // 平面由法向量定义，平面上的两个轴是垂直于法向量的
+            // for the plane defined by this normal, we need to determine the two axes on the plane
             int normalIdx = i;
             int axis1Idx = (normalIdx + 1) % 3;
             int axis2Idx = (normalIdx + 2) % 3;
             
-            // 选择平面上特征值较大的轴
+            // Choose the axis with the larger eigenvalue on the plane
             if (eigenVectorsWithValues[axis1Idx].first > eigenVectorsWithValues[axis2Idx].first) {
                 outAxis = eigenVectorsWithValues[axis1Idx].second;
             } else {
@@ -95,7 +94,7 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
         }
     }
     
-    // 尝试标准平面
+    // try standard planes
     std::vector<Vec3> standardNormals = {
         Vec3(1, 0, 0),
         Vec3(0, 1, 0),
@@ -104,25 +103,25 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
     
     for (const auto& planeNormal : standardNormals) {
         if (checkSymmetryPlane(meshVertices, planeNormal, centroid)) {
-            // 对于标准平面，我们需要确定平面上的两个轴
-            // 例如，如果法向量是(1,0,0)，那么平面上的轴是(0,1,0)和(0,0,1)
+            // for the standard plane, we need to determine the two axes on the plane
+            // for example, if the normal is (1,0,0), then the axes on the plane are (0,1,0) and (0,0,1)
             Vec3 axis1, axis2;
             
             if (std::abs(planeNormal.x) > 0.9f) {
-                // YZ平面
+                // YZ plane
                 axis1 = Vec3(0, 1, 0);
                 axis2 = Vec3(0, 0, 1);
             } else if (std::abs(planeNormal.y) > 0.9f) {
-                // XZ平面
+                // XZ plane
                 axis1 = Vec3(1, 0, 0);
                 axis2 = Vec3(0, 0, 1);
             } else {
-                // XY平面
+                // XY plane
                 axis1 = Vec3(1, 0, 0);
                 axis2 = Vec3(0, 1, 0);
             }
             
-            // 计算每个轴上的方差来确定较大的轴
+            // calculate the variance along each axis to determine the larger one
             float variance1 = 0.0f, variance2 = 0.0f;
             
             for (const auto& vertex : meshVertices) {
@@ -136,7 +135,7 @@ bool SimplePCLReflectiveSymmetryDetector::detect(
             variance1 /= meshVertices.size();
             variance2 /= meshVertices.size();
             
-            // 选择方差较大的轴
+            // choose the axis with the larger variance as the explosion axis
             outAxis = (variance1 > variance2) ? axis1 : axis2;
             
             std::cout << "Detected reflective symmetry with standard normal: (" 

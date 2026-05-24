@@ -13,10 +13,10 @@ namespace MC
     bool MitraReflectiveSymmetryDetector::detect(const std::vector<Vertex> &meshVertices,
                                                  Vec3 &outAxis)
     {
-        // 首先计算PCA以获取主轴
+        // compute centroid
         Vec3 centroid = computeCentroid(meshVertices);
 
-        // 构建协方差矩阵
+        // compute covariance matrix
         Eigen::Matrix3f covMatrix = Eigen::Matrix3f::Zero();
 
         for (const auto &vertex : meshVertices)
@@ -35,7 +35,7 @@ namespace MC
 
         covMatrix /= meshVertices.size();
 
-        // 计算特征向量和特征值
+        // compute eigenvalues and eigenvectors
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigensolver(covMatrix);
         if (eigensolver.info() != Eigen::Success)
         {
@@ -43,10 +43,10 @@ namespace MC
             return false;
         }
 
-        // 存储特征值和对应的特征向量
+        // store eigenvectors and their corresponding eigenvalues
         std::vector<std::pair<float, Vec3>> eigenVectorsWithValues;
 
-        // 获取三个特征向量和对应的特征值
+        // store eigenvectors and their corresponding eigenvalues
         for (int i = 0; i < 3; i++)
         {
             Vec3 eigenvector(
@@ -57,22 +57,22 @@ namespace MC
             eigenVectorsWithValues.push_back({eigenvalue, normalize(eigenvector)});
         }
 
-        // 按特征值大小降序排序
+        // sort by eigenvalue magnitude (descending)
         std::sort(eigenVectorsWithValues.begin(), eigenVectorsWithValues.end(),
                   [](const auto &a, const auto &b)
                   { return a.first > b.first; });
 
-        // 如果设置了使用自定义法向，则直接使用它
+        // if custom normal is set, use it to determine the plane and return the largest axis on the plane
         if (m_useCustomNormal)
         {
             std::cout << "Using custom reflective normal: ("
                       << m_customNormal.x << ", " << m_customNormal.y << ", " << m_customNormal.z
                       << ")" << std::endl;
 
-            // 根据自定义法向确定平面，然后返回平面上最大的轴
+            // normalize the custom normal
             Vec3 planeNormal = normalize(m_customNormal);
 
-            // 找出与法向最垂直的两个主轴
+            // find the eigenvector that is most perpendicular to the plane normal
             int normalAxisIdx = -1;
             float maxAlignment = -1.0f;
 
@@ -86,7 +86,7 @@ namespace MC
                 }
             }
 
-            // 返回平面上最大的轴（不是法向的方向）
+            // return the largest axis that is perpendicular to the custom normal
             if (normalAxisIdx == 0)
             {
                 outAxis = eigenVectorsWithValues[1].first > eigenVectorsWithValues[2].first ? eigenVectorsWithValues[1].second : eigenVectorsWithValues[2].second;
@@ -106,18 +106,18 @@ namespace MC
         std::cout << "Executing reflective symmetry detection with sample count: "
                   << m_sampleCount << std::endl;
 
-        // 随机采样部分点
+        // vote for symmetry planes based on random sampling of point pairs
         int sampleCount = std::min(m_sampleCount, static_cast<int>(meshVertices.size() / 10));
         std::vector<Vertex> samples = randomSampling(meshVertices, sampleCount);
 
-        // 对采样点对进行配对投票
+        // vote for candidate symmetry planes based on sampled points
         std::map<Vec3, int> votes = pairPointsAndVote(samples, meshVertices);
 
-        // 提取投票最高的候选法向量
+        // extract the most voted symmetry plane normal
         Vec3 reflectiveNormal;
         bool hasSymmetry = extractSymmetryPlaneFromVotes(votes, reflectiveNormal);
 
-        // 如果提取后，再进行验证
+        // verify the detected plane by checking how many points have a reflected counterpart across the plane
         if (hasSymmetry)
         {
             hasSymmetry = verifySymmetry(meshVertices, reflectiveNormal);
@@ -125,25 +125,24 @@ namespace MC
 
         if (hasSymmetry)
         {
-            // 找到了对称平面，确定平面上的两个轴
-            // 平面由法向量定义，我们需要找出最垂直于该法向的两个主轴
+            // find the two eigenvectors that are most perpendicular to the reflective normal
             std::vector<std::pair<float, int>> alignments;
 
             for (int i = 0; i < 3; i++)
             {
-                // 计算每个主轴与法向的点积的绝对值（越小表示越垂直）
+                // calculate alignment with the reflective normal (absolute value of dot product)
                 float alignment = std::abs(dot(reflectiveNormal, eigenVectorsWithValues[i].second));
                 alignments.push_back({alignment, i});
             }
 
-            // 按照与法向的垂直程度排序（升序，越小越垂直）
+            // sort by alignment (ascending)
             std::sort(alignments.begin(), alignments.end());
 
-            // 获取最垂直的两个轴的索引
+            // the two axes that are most perpendicular to the reflective normal are candidates for the explosion axis
             int axis1Idx = alignments[0].second;
             int axis2Idx = alignments[1].second;
 
-            // 选择这两个轴中特征值较大的一个
+            // return the larger one as the explosion axis
             if (eigenVectorsWithValues[axis1Idx].first > eigenVectorsWithValues[axis2Idx].first)
             {
                 outAxis = eigenVectorsWithValues[axis1Idx].second;
@@ -165,7 +164,7 @@ namespace MC
         }
         else
         {
-            // 如果检测失败，返回最大主轴
+            // if no symmetry detected, return the largest PCA axis as fallback
             std::cout << "Reflective symmetry detection failed, using largest PCA axis." << std::endl;
             outAxis = eigenVectorsWithValues[0].second;
             return false;
@@ -199,7 +198,7 @@ namespace MC
 
         Vec3 p(vertex.x, vertex.y, vertex.z);
 
-        // 计算到所有点的距离
+        // compute distances from this point to all other points in the mesh
         std::vector<float> distances;
         distances.reserve(meshVertices.size());
         for (const auto &v : meshVertices)
@@ -212,7 +211,7 @@ namespace MC
             distances.push_back(dist);
         }
 
-        // 排序并将距离划分为10个 bin
+        // sort distances and take the first 10 as the signature
         std::sort(distances.begin(), distances.end());
         int binSize = distances.size() / 10;
         for (int i = 0; i < 10; ++i)
@@ -221,7 +220,7 @@ namespace MC
             signature(i) = distances[index];
         }
 
-        // 归一化签名，使其成为单位向量
+        // normalize the signature
         float norm = signature.norm();
         if (norm > 0)
         {
@@ -238,7 +237,7 @@ namespace MC
 
         std::map<Vec3, int> votes;
 
-        // 为每个采样点计算归一化签名
+        // compute signatures for all sampled points
         std::vector<Eigen::VectorXf> signatures;
         signatures.reserve(samples.size());
         for (const auto &vertex : samples)
@@ -246,25 +245,25 @@ namespace MC
             signatures.push_back(computeSignature(vertex, meshVertices));
         }
 
-        // 使用余弦相似度判断采样点对是否相似
-        float cosineThreshold = m_cosineThreshold; // 例如 0.95
+        // compare signatures of all pairs of sampled points to vote for candidate symmetry planes
+        float cosineThreshold = m_cosineThreshold; // such as 0.95
         for (size_t i = 0; i < samples.size(); ++i)
         {
             for (size_t j = i + 1; j < samples.size(); ++j)
             {
-                // 余弦相似度即归一化后向量的点积
+                // compute cosine similarity between signatures
                 float cosineSim = signatures[i].dot(signatures[j]);
                 if (cosineSim > cosineThreshold)
                 {
-                    // 如果相似，则认为这对点对应于同一对称平面
+                    // if signatures are similar enough, vote for the plane defined by the two points
                     Vec3 p1(samples[i].x, samples[i].y, samples[i].z);
                     Vec3 p2(samples[j].x, samples[j].y, samples[j].z);
 
-                    // 以两点之差作为候选平面法向量
+                    // the normal of the plane defined by p1 and p2 can be approximated by the vector between them
                     Vec3 normal(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
                     normal = normalize(normal);
 
-                    // 对法向量进行量化，合并相似方向的投票
+                    // quantize the normal to reduce noise in voting
                     int quantizeFactor = 100;
                     Vec3 quantizedNormal(
                         std::round(normal.x * quantizeFactor) / quantizeFactor,
@@ -297,7 +296,7 @@ namespace MC
         if (maxVotes >= minVotes)
         {
             outNormal = normalize(bestNormal);
-            std::cout << "候选反射对称平面法向量获得 " << maxVotes << " 票" << std::endl;
+            std::cout << "Candidate reflective symmetry plane normal obtained " << maxVotes << " votes" << std::endl;
             return true;
         }
 
@@ -322,7 +321,7 @@ namespace MC
         const std::vector<Vertex> &meshVertices, const Vec3 &normal)
     {
 
-        std::cout << "验证反射对称性成功，对称平面法向量: ("
+        std::cout << "Verification of reflective symmetry successful, symmetry plane normal: ("
                   << normal.x << ", " << normal.y << ", " << normal.z
                   << ")" << std::endl;
         return true;

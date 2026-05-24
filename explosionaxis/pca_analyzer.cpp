@@ -6,7 +6,7 @@ namespace MC {
 
 using namespace VectorOps;
 
-// 主方法：分析模型并确定主轴方向
+// main method to analyze the principal axis using PCA
 Vec3 PCAAnalyzer::analyzePrincipalAxis(const std::vector<Vertex>& meshVertices) {
     std::cout << "Executing PCA analysis, using " 
               << (m_useLongestAxis ? "longest" : "shortest") << " principal axis." << std::endl;
@@ -31,8 +31,8 @@ Vec3 PCAAnalyzer::analyzePrincipalAxis(const std::vector<Vertex>& meshVertices) 
     
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(covMatrix);
     
-    // 根据设置选择最长或最短主轴
-    int eigenVecIndex = m_useLongestAxis ? 2 : 0; // 2为最长轴，0为最短轴
+    // select the eigenvector corresponding to the largest or smallest eigenvalue based on configuration
+    int eigenVecIndex = m_useLongestAxis ? 2 : 0; // eigenvalues are in ascending order
     Eigen::Vector3f eigenVec = solver.eigenvectors().col(eigenVecIndex);
     
     Vec3 axis(eigenVec(0), eigenVec(1), eigenVec(2));
@@ -41,7 +41,7 @@ Vec3 PCAAnalyzer::analyzePrincipalAxis(const std::vector<Vertex>& meshVertices) 
     return normalize(axis);
 }
 
-// 3D PCA：计算协方差矩阵，并返回第一主成分
+// 3D PCA: compute the covariance matrix of the vertices and return the eigenvector corresponding to the largest eigenvalue as the principal axis
 Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
     std::cout << "Execute 3D PCA analyzation." << std::endl;
     
@@ -68,7 +68,7 @@ Vec3 PCAAnalyzer::compute3DPCA(const std::vector<Vertex>& meshVertices) {
     return normalize(Vec3(eigenVec(0), eigenVec(1), eigenVec(2)));
 }
 
-// 2D PCA：将顶点投影到指定平面，然后在该平面上计算第一主成分，最后映射回3D
+// 2D PCA: project points onto the plane defined by the normal, compute the covariance matrix in 2D, and return the eigenvector corresponding to the largest eigenvalue as the principal axis on the plane
 Vec3 PCAAnalyzer::compute2DPCAOnPlane(const std::vector<Vertex>& meshVertices, const Vec3& planeNormal) {
     std::cout << "Execute 2D PCA analyzation." << std::endl;
     
@@ -96,7 +96,7 @@ Vec3 PCAAnalyzer::compute2DPCAOnPlane(const std::vector<Vertex>& meshVertices, c
         projectedCentroid.z /= count;
     }
     
-    // 建立局部二维坐标系：选一个与 n 垂直的向量作为 u
+    // construct an orthonormal basis for the plane
     Vec3 u;
     if (std::abs(n.x) < std::abs(n.y) && std::abs(n.x) < std::abs(n.z))
         u = normalize(cross(Vec3(1, 0, 0), n));

@@ -591,7 +591,7 @@ void main() {
             if (ImGui::BeginPopupModal(errorPopupTitle.c_str(), &showErrorPopup,
                                        ImGuiWindowFlags_AlwaysAutoResize))
             {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // 黑色文字
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // black text
                 ImGui::TextWrapped("%s", errorPopupMessage.c_str());
                 ImGui::PopStyleColor();
                 ImGui::Separator();

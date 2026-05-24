@@ -65,21 +65,21 @@ void RotationalStrategy::applyConfig(const ExplosionAxisConfig& config) {
 }
 
 Vec3 RotationalStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
-    Vec3 axis = {0, 0, 1}; // 默认轴为z轴
+    Vec3 axis = {0, 0, 1}; // default z axis
     int symmetryOrder = 0;
     
     bool success = m_detector->detect(meshVertices, axis, symmetryOrder);
     
-    // 更新检测状态
+    // unpdate detection status
     ExplosionAxisManager::getInstance().setRotationalDetectionStatus(success);
     
     if (!success) {
         std::cout << "Rotational symmetry detection failed. Falling back to previous axis." << std::endl;
-        // 使用上一次成功的轴
+        // return last successful axis as fallback
         return ExplosionAxisManager::getInstance().getLastSuccessfulAxis();
     }
     
-    // 检测成功，保存这个轴
+    // detection successful, save this axis
     ExplosionAxisManager::getInstance().setLastSuccessfulAxis(axis);
     return axis;
 }
@@ -105,11 +105,11 @@ void ReflectiveStrategy::applyConfig(const ExplosionAxisConfig& config) {
 }
 
 Vec3 ReflectiveStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
-    Vec3 normal = {0, 0, 1}; // 默认法向为z轴
+    Vec3 normal = {0, 0, 1}; // default normal is the z-axis
     
     bool success = m_detector->detect(meshVertices, normal);
     
-    // 更新检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setReflectiveDetectionStatus(success);
     
     if (!success) {
@@ -117,7 +117,7 @@ Vec3 ReflectiveStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
         return ExplosionAxisManager::getInstance().getLastSuccessfulAxis();
     }
     
-    // 检测成功，保存这个轴
+    // detection successful, save this axis
     ExplosionAxisManager::getInstance().setLastSuccessfulAxis(normal);
     return normal;
 }
@@ -141,13 +141,13 @@ void PCAStrategy::applyConfig(const ExplosionAxisConfig& config) {
 }
 
 Vec3 PCAStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
-    // PCA总是成功的
+    // PCA is always successful, so we can directly compute and return the axis
     ExplosionAxisManager::getInstance().setDetectionStatus(true);
     
-    // 计算主轴
+    // analyze principal axis using PCA
     Vec3 axis = m_analyzer->analyzePrincipalAxis(meshVertices);
     
-    // 保存轴
+    // save this axis as the last successful one
     ExplosionAxisManager::getInstance().setLastSuccessfulAxis(axis);
     return axis;
 }
@@ -186,14 +186,14 @@ void CombinedStrategy::applyConfig(const ExplosionAxisConfig& config) {
 }
 
 Vec3 CombinedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
-    // 优先尝试旋转对称性
+    // step 1: try rotational symmetry detection
     Vec3 axis;
     int symmetryOrder;
     
     std::cout << "Attempting to detect rotational symmetry..." << std::endl;
     bool rotSuccess = m_rotationDetector->detect(meshVertices, axis, symmetryOrder);
     
-    // 更新旋转检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setRotationalDetectionStatus(rotSuccess);
     
     if (rotSuccess) {
@@ -202,11 +202,11 @@ Vec3 CombinedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
         return axis;
     }
     
-    // 如果旋转对称性检测失败，尝试反射对称性
+    // step 2: if no rotational symmetry, try reflective symmetry
     std::cout << "Attempting to detect reflective symmetry..." << std::endl;
     bool refSuccess = m_reflectionDetector->detect(meshVertices, axis);
     
-    // 更新反射检测状态
+    // update
     ExplosionAxisManager::getInstance().setReflectiveDetectionStatus(refSuccess);
     
     if (refSuccess) {
@@ -215,10 +215,10 @@ Vec3 CombinedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
         return axis;
     }
     
-    // 如果两种对称性检测都失败，使用PCA
+    // step 3: if no symmetry detected, use PCA
     std::cout << "No symmetry detected. Using PCA analysis..." << std::endl;
     
-    // PCA总是成功的
+    // PCA is always successful
     ExplosionAxisManager::getInstance().setDetectionStatus(true);
     
     axis = m_pcaAnalyzer->analyzePrincipalAxis(meshVertices);
@@ -232,29 +232,29 @@ PCLOptimizedStrategy::PCLOptimizedStrategy() {
     // In a real implementation, an instance of the PCL detector would be created here
     m_rotationDetector = std::make_unique<SimplePCLRotationalSymmetryDetector>();
     
-    // 创建Eigen优化的反射对称性检测器
+    // create PCL optimized reflective symmetry detector
     m_reflectionDetector = std::make_unique<SimplePCLReflectiveSymmetryDetector>();
     
-    // 创建PCA分析器
+    // create PCA analyzer
     m_pcaAnalyzer = std::make_unique<PCAAnalyzer>();
     std::cout << "Creating PCL optimized strategy (placeholder implementation)" << std::endl;
 }
 
 void PCLOptimizedStrategy::applyConfig(const ExplosionAxisConfig& config) {
-    // 配置旋转检测器
+    // configure rotation detector
     if (m_rotationDetector) {
         m_rotationDetector->setSampleCount(config.rotationSampleCount);
         m_rotationDetector->setSymmetryOrder(config.rotationSymmetryOrder);
         m_rotationDetector->useCustomAxis(config.useCustomRotationAxis);
         m_rotationDetector->setCustomAxis(config.rotationAxis);
     }
-    // 配置反射检测器
+    // configure reflection detector
     if (m_reflectionDetector) {
         m_reflectionDetector->setSampleCount(config.mirrorSampleCount);
         m_reflectionDetector->useCustomAxis(config.useCustomMirrorNormal);
         m_reflectionDetector->setCustomAxis(config.mirrorNormal);
     }
-    // 配置 PCA 分析器
+    // configure PCA analyzer
     if (m_pcaAnalyzer) {
         m_pcaAnalyzer->setUseLongestAxis(config.useLongestAxis);
     }
@@ -263,17 +263,17 @@ void PCLOptimizedStrategy::applyConfig(const ExplosionAxisConfig& config) {
 
 PCLOptimizedStrategy::~PCLOptimizedStrategy() = default;
 
-// PCLOptimizedStrategy 计算爆炸轴实现
+// PCLOptimizedStrategy computeAxis implementation
 Vec3 PCLOptimizedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
     std::cout << "Using PCL Optimized Strategy for explosion axis detection" << std::endl;
     
-    // 步骤1: 检测旋转对称性
+    // step 1: try rotational symmetry detection
     Vec3 rotationAxis;
     int symmetryOrder;
     
     bool rotSuccess = m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder);
     
-    // 更新检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setRotationalDetectionStatus(rotSuccess);
     
     if (rotSuccess) {
@@ -282,11 +282,11 @@ Vec3 PCLOptimizedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) 
         return rotationAxis;
     }
     
-    // 步骤2: 如果没有旋转对称性，检测反射对称性
+    // step 2: if no rotational symmetry, try reflective symmetry
     Vec3 reflectiveNormal;
     bool refSuccess = m_reflectionDetector->detect(meshVertices, reflectiveNormal);
     
-    // 更新检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setReflectiveDetectionStatus(refSuccess);
     
     if (refSuccess) {
@@ -296,10 +296,10 @@ Vec3 PCLOptimizedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) 
         return axis;
     }
     
-    // 步骤3: 如果没有任何对称性，使用3D PCA
+    // step 3: if no symmetry detected, use 3D PCA
     std::cout << "No symmetry detected with PCL, using 3D PCA" << std::endl;
     
-    // PCA总是成功的
+    // PCA is always successful
     ExplosionAxisManager::getInstance().setDetectionStatus(true);
     
     Vec3 axis = m_pcaAnalyzer->compute3DPCA(meshVertices);
@@ -309,23 +309,23 @@ Vec3 PCLOptimizedStrategy::computeAxis(const std::vector<Vertex>& meshVertices) 
 
 //-------------- EigenStrategy --------------//
 
-// EigenStrategy 构造函数
+// EigenStrategy constructor
 EigenStrategy::EigenStrategy() {
-    // 创建Eigen优化的旋转对称性检测器
+    // create Eigen optimized rotational symmetry detector
     m_rotationDetector = std::make_unique<EigenRotationalSymmetryDetector>();
     
-    // 创建Eigen优化的反射对称性检测器
+    // create Eigen optimized reflective symmetry detector
     m_reflectionDetector = std::make_unique<EigenReflectiveSymmetryDetector>();
     
-    // 创建PCA分析器
+    // create PCA analyzer
     m_pcaAnalyzer = std::make_unique<PCAAnalyzer>();
     
     std::cout << "Created Eigen Strategy using Eigen detectors" << std::endl;
 }
 
-// EigenStrategy 析构函数
+// EigenStrategy destructor
 EigenStrategy::~EigenStrategy() {
-    // 智能指针会自动处理内存释放
+    // unique_ptr will automatically clean up
 }
 
 void EigenStrategy::applyConfig(const ExplosionAxisConfig& config) {
@@ -333,17 +333,17 @@ void EigenStrategy::applyConfig(const ExplosionAxisConfig& config) {
     std::cout << "Applied config to combined strategy" << std::endl;
 }
 
-// EigenStrategy 计算爆炸轴实现
+// EigenStrategy computeAxis implementation
 Vec3 EigenStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
     std::cout << "Using Eigen Strategy for explosion axis detection" << std::endl;
     
-    // 步骤1: 检测旋转对称性
+    // step 1: try rotational symmetry detection
     Vec3 rotationAxis;
     int symmetryOrder;
     
     bool rotSuccess = m_rotationDetector->detect(meshVertices, rotationAxis, symmetryOrder);
     
-    // 更新检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setRotationalDetectionStatus(rotSuccess);
     
     if (rotSuccess) {
@@ -352,11 +352,11 @@ Vec3 EigenStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
         return rotationAxis;
     }
     
-    // 步骤2: 如果没有旋转对称性，检测反射对称性
+    // step 2: if no rotational symmetry, try reflective symmetry
     Vec3 reflectiveNormal;
     bool refSuccess = m_reflectionDetector->detect(meshVertices, reflectiveNormal);
     
-    // 更新检测状态
+    // update detection status
     ExplosionAxisManager::getInstance().setReflectiveDetectionStatus(refSuccess);
     
     if (refSuccess) {
@@ -366,10 +366,10 @@ Vec3 EigenStrategy::computeAxis(const std::vector<Vertex>& meshVertices) {
         return axis;
     }
     
-    // 步骤3: 如果没有任何对称性，使用3D PCA
+    // step 3: if no symmetry detected, use 3D PCA
     std::cout << "No symmetry detected with Eigen, using 3D PCA" << std::endl;
     
-    // PCA总是成功的
+    // PCA is always successful
     ExplosionAxisManager::getInstance().setDetectionStatus(true);
     
     Vec3 axis = m_pcaAnalyzer->compute3DPCA(meshVertices);
@@ -392,7 +392,7 @@ void ExplosionAxisManager::setStrategy(const std::string& strategyName) {
     m_currentStrategy = ExplosionAxisStrategy::create(strategyName);
     m_config.strategyName = strategyName;
     
-    // 重置检测状态
+    // reset detection status for the new strategy
     m_config.rotationalDetectionSuccessful = true;
     m_config.reflectiveDetectionSuccessful = true;
     m_config.lastDetectionSuccessful = true;
@@ -422,17 +422,17 @@ Vec3 ExplosionAxisManager::computeExplosionAxis(const std::vector<Vertex>& meshV
                   << m_config.customExplosionAxis.y << ", " 
                   << m_config.customExplosionAxis.z << ")" << std::endl;
         
-        // 直接返回自定义爆炸轴
+        // directly return the custom axis from config
         return m_config.customExplosionAxis;
     }
     
-    // 原有逻辑 - 使用策略计算爆炸轴
+    // if no custom axis, use the current strategy to compute the explosion axis
     if (m_currentStrategy) {
         std::cout << "Using strategy '" << m_currentStrategy->getName() << "' to compute explosion axis" << std::endl;
         return m_currentStrategy->computeAxis(meshVertices);
     }
     
-    // 默认返回z轴
+    // fallback if no strategy is set
     std::cout << "Warning: No valid strategy set, using default z-axis as explosion axis" << std::endl;
     return Vec3(0, 0, 1);
 }
