@@ -252,8 +252,7 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-        glfwGetFramebufferSize(window, &width, &height);
-        if (width<=0||height<=0)
+        if (!updateViewport(window, &width, &height))
         {
             glfwWaitEvents();
             continue;
@@ -264,7 +263,6 @@ int main()
             lastWidth = width;
             lastHeight = height;
         }
-
         // update exploded view
         explodedView.enabled = showIntersections;
         if (g_explosionDistance != explodedView.explosionDistance)

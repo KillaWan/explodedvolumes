@@ -30,8 +30,8 @@ namespace MC
     void setupImGuiStyle();
 
     // viewport
-    void calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight);
-    void updateViewport(GLFWwindow *window);
+    bool calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight);
+    bool updateViewport(GLFWwindow *window, int *outWidth = nullptr, int *outHeight = nullptr);
 
     // explosion strategy GUI
     void renderExplosionAxisGUI(std::string &currentStrategy);

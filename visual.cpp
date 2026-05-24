@@ -138,40 +138,57 @@ void main() {
     }
 
     // calculate viewport size
-    void calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight)
+    bool calculateViewport(GLFWwindow *window, int &viewportX, int &viewportY, int &viewportWidth, int &viewportHeight)
     {
-        // window size
-        int windowWidth, windowHeight;
-        glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+        int framebufferWidth = 0;
+        int framebufferHeight = 0;
+        glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
 
-        // panel width and padding
-        float panelWidth = 300.0f;
-        float padding = 10.0f;
-
-        // viewport size
+        if (framebufferWidth<=0||framebufferHeight<=0)
+        {
+            viewportX = 0;
+            viewportY = 0;
+            viewportWidth = 0;
+            viewportHeight = 0;
+            return false;
+        }
         viewportX = 0;
         viewportY = 0;
-        viewportWidth = windowWidth - panelWidth - padding * 2;
-        viewportHeight = windowHeight;
-
-        // ensure valid viewport dimensions
-        if (viewportWidth < 1)
-            viewportWidth = 1;
-        if (viewportHeight < 1)
-            viewportHeight = 1;
+        viewportWidth = framebufferWidth;
+        viewportHeight = framebufferHeight;
+        return true;
     }
 
     //  apply calculated viewport to OpenGL
-    void updateViewport(GLFWwindow *window)
+    bool updateViewport(GLFWwindow *window, int *outWidth, int *outHeight)
     {
-        int viewportX, viewportY, viewportWidth, viewportHeight;
-        calculateViewport(window, viewportX, viewportY, viewportWidth, viewportHeight);
+        int viewportX = 0;
+        int viewportY = 0;
+        int viewportWidth = 0;
+        int viewportHeight = 0;
+        if (!calculateViewport(window, viewportX, viewportY, viewportWidth, viewportHeight))
+        {
+            return false;
+        }
         glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+        if (outWidth)
+        {
+            *outWidth = viewportWidth;
+        }
+        if (outHeight)
+        {
+            *outHeight = viewportHeight;
+        }
+        return true;
     }
 
     // window resize callback
     void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     {
+        if (width<=0||height<=0)
+        {
+            return;
+        }
         updateViewport(window);
     }
 
@@ -612,13 +629,17 @@ void main() {
                      unsigned int axisVAO,
                      unsigned int lineShaderProgram)
     {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        if (width<=0||height<=0)
+        int width = 0;
+        int height = 0;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
+
+        if (!updateViewport(window, &width, &height))
         {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return;
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
+
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -720,8 +741,7 @@ void main() {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());*/
 
-        glfwGetFramebufferSize(window, &width, &height);
-        float aspect = (height != 0) ? (float)width / height : 1.0f;
+        float aspect = static_cast<float>(width) / static_cast<float>(height);
 
         glUseProgram(shaderProgram);
 
@@ -774,6 +794,10 @@ void main() {
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        if(!updateViewport(window, &width, &height))
+        {
+            return;
+        }
         // post processor
         postProcessor.render(width, height);
 
@@ -907,18 +931,21 @@ void main() {
 
         ImGui::End();
 
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        if(width<=0||height<=0)
+        int width = 0;
+        int height = 0;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
+
+        if (!updateViewport(window, &width, &height))
         {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return;
         }
-        // render toFBO
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
+
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        float aspect = (height != 0) ? (float)width / height : 1.0f;
+        float aspect = static_cast<float>(width) / static_cast<float>(height);
 
         glm::mat4 model(1.0f);
         float scale_factor = 20.0f / mesh.max_dimension;
@@ -979,6 +1006,10 @@ void main() {
             glBindVertexArray(0);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (!updateViewport(window, &width, &height))
+        {
+            return;
+        }
         postProcessor.render(width, height);
 
         ImGui::Render();
