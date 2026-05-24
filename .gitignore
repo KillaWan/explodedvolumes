@@ -6,6 +6,7 @@
 *.out
 app.dSYM
 app
+dist/
 dependencies
 
 # Ignore IDE related files
