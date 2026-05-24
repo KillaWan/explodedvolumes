@@ -86,6 +86,40 @@ namespace MC
                 max_val = std::max(max_val, volume.data[i]);
             }
         }
+        else if (nim->datatype == NIFTI_TYPE_INT16)
+        {
+            auto *src = static_cast<int16_t *>(nim->data);
+            for (size_t i = 0; i < nim->nvox; i++)
+            {
+                volume.data[i] = static_cast<float>(src[i]);
+                min_val = std::min(min_val, volume.data[i]);
+                max_val = std::max(max_val, volume.data[i]);
+            }
+        }
+        else if (nim->datatype == NIFTI_TYPE_INT8)
+        {
+            auto *src = static_cast<int8_t *>(nim->data);
+            for (size_t i = 0; i < nim->nvox; i++)
+                volume.data[i] = static_cast<float>(src[i]);
+        }
+        else if (nim->datatype == NIFTI_TYPE_UINT16)
+        {
+            auto *src = static_cast<uint16_t *>(nim->data);
+            for (size_t i = 0; i < nim->nvox; i++)
+                volume.data[i] = static_cast<float>(src[i]);
+        }
+        else if (nim->datatype == NIFTI_TYPE_INT32)
+        {
+            auto *src = static_cast<int32_t *>(nim->data);
+            for (size_t i = 0; i < nim->nvox; i++)
+                volume.data[i] = static_cast<float>(src[i]);
+        }
+        else if (nim->datatype == NIFTI_TYPE_FLOAT64)
+        {
+            auto *src = static_cast<double *>(nim->data);
+            for (size_t i = 0; i < nim->nvox; i++)
+                volume.data[i] = static_cast<float>(src[i]);
+        }
         else
         {
             std::cerr << "Unsupported data type: " << nim->datatype << std::endl;
