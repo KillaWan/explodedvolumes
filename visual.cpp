@@ -1092,9 +1092,10 @@ void main() {
     }
 
     // modify the postProcessor initialization part in the runRenderingLoop function
+    // Not really used
     void runRenderingLoop(GLFWwindow *window, const VolumeData &volumeData, Mesh &mesh)
     {
-        float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f; // 从中间值开始
+        float isoLevel = (volumeData.maxValue + volumeData.minValue) / 2.0f; // from half
         float tempIsoLevel = isoLevel;
 
         camera.distance = 100.0f;
