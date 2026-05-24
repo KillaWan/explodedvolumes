@@ -353,8 +353,6 @@ namespace MC
 
             result.segments.push_back(segment);
 
-            setupSegmentMesh(segment);
-
             return result;
         }
 
@@ -475,13 +473,6 @@ namespace MC
                            }),
             result.segments.end());
 
-// setting the OpenGL buffer for each fragment
-#pragma omp parallel for
-        for (size_t i = 0; i < result.segments.size(); ++i)
-        {
-            setupSegmentMesh(result.segments[i]);
-        }
-
         // time end
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
@@ -551,12 +542,8 @@ namespace MC
             }
         }
 
-// update OpenGL buffers for each fragment - parallel processing
-#pragma omp parallel for
-        for (size_t i = 0; i < segments.size(); i++)
-        {
-            updateSegmentMesh(segments[i]);
-        }
+        // Segment vertices stay in local coordinates; rendering applies displacement
+        // through each segment's model matrix.
     }
 
     void setupSegmentMesh(ExplodedSegment &segment)
@@ -580,17 +567,9 @@ namespace MC
 
         glBindVertexArray(segment.VAO);
 
-        std::vector<Vertex> displacedVertices = segment.vertices;
-        for (auto &v : displacedVertices)
-        {
-            v.x += segment.displacement.x;
-            v.y += segment.displacement.y;
-            v.z += segment.displacement.z;
-        }
-
         glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
-        glBufferData(GL_ARRAY_BUFFER, displacedVertices.size() * sizeof(Vertex),
-                     displacedVertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, segment.vertices.size() * sizeof(Vertex),
+                     segment.vertices.data(), GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, segment.EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, segment.indices.size() * sizeof(IndexType),
@@ -609,17 +588,9 @@ namespace MC
             return;
         }
 
-        std::vector<Vertex> displacedVertices = segment.vertices;
-        for (auto &v : displacedVertices)
-        {
-            v.x += segment.displacement.x;
-            v.y += segment.displacement.y;
-            v.z += segment.displacement.z;
-        }
-
         glBindBuffer(GL_ARRAY_BUFFER, segment.VBO);
-        glBufferData(GL_ARRAY_BUFFER, displacedVertices.size() * sizeof(Vertex),
-                     displacedVertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, segment.vertices.size() * sizeof(Vertex),
+                     segment.vertices.data(), GL_STATIC_DRAW);
     }
 
     // cleaning up exploded view resources
