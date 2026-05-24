@@ -197,8 +197,6 @@ int main()
 
     // initialize mesh and marching cubes
     Mesh mesh;
-    float isoLevelPercent = 10.0f;
-    float tempIsoLevelPercent = isoLevelPercent;
     float isoLevel = volumeData.minValue + (MC::g_isoLevelPercent / 100.0f) * (volumeData.maxValue - volumeData.minValue);
     float tempIsoLevel = isoLevel;
     generateMesh(volumeData, isoLevel, mesh);
