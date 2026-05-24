@@ -251,7 +251,13 @@ int main()
     // main loop
     while (!glfwWindowShouldClose(window))
     {
+        glfwPollEvents();
         glfwGetFramebufferSize(window, &width, &height);
+        if (width<=0||height<=0)
+        {
+            glfwWaitEvents();
+            continue;
+        }
         if (width != lastWidth || height != lastHeight)
         {
             postProcessor.resize(width, height);
@@ -315,7 +321,6 @@ int main()
         }
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
     // clean

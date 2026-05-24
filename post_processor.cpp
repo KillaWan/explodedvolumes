@@ -184,6 +184,10 @@ void PostProcess::render(int screenWidth, int screenHeight)
     // Cleanup screen
     // glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // glClear(GL_COLOR_BUFFER_BIT);
+    if(screenWidth<=0||screenHeight<=0)
+    {
+        return;
+    }
     glDisable(GL_DEPTH_TEST);
     
     glUseProgram(postProcessShader);
@@ -205,6 +209,10 @@ void PostProcess::render(int screenWidth, int screenHeight)
 
 void PostProcess::resize(int screenWidth, int screenHeight)
 {
+    if(screenWidth<=0||screenHeight<=0)
+    {
+        return;
+    }
     // Update texture and size
     glBindTexture(GL_TEXTURE_2D, sceneTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
