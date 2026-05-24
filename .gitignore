@@ -1,4 +1,4 @@
-# 忽略编译生成的文件
+# Ignore compiled files
 *.o
 *.a
 *.so
@@ -8,21 +8,22 @@ app.dSYM
 app
 dependencies
 
-# 忽略 IDE 相关文件
+# Ignore IDE related files
 .vscode/
 .idea/
 *.sublime-workspace
 .DS_Store
 
-
-
-# 忽略日志文件
+# Ignore log files
 *.log
 
-# 忽略依赖包
+# Ignore dependency packages
 node_modules/
 vendor/
 
-# 忽略环境配置文件
+# Ignore environment configuration files
 .env
 config.json
+
+# Ignore ImGui config
+imgui.ini
