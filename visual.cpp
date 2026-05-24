@@ -619,7 +619,7 @@ void main() {
             return;
         }
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -915,7 +915,7 @@ void main() {
         }
         // render toFBO
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessor.getFBO());
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float aspect = (height != 0) ? (float)width / height : 1.0f;
