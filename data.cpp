@@ -108,12 +108,12 @@ namespace MC
     // Open NifTi
     std::string openNiftiFileDialog()
     {
-        std::string filePath = FileDialog::openFile(
+        auto selectedFiles = FileDialog::openFile(
             "Open NIfTI File",
             std::filesystem::current_path().string(),
-            {{"NIfTI Files", "*.nii"}})[0];
+            {{"NIfTI Files", "*.nii"}});
 
-        return filePath;
+        return selectedFiles.empty() ? std::string() : selectedFiles[0];
     }
 
 } // namespace MC

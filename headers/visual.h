@@ -42,7 +42,7 @@ namespace MC
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
                      std::string &currentExplosionStrategy, PostProcess &postProcessor,
-                     unsigned int axisVAO);
+                     unsigned int axisVAO, unsigned int lineShaderProgram);
 
     // exploded view render
     void renderExplodedView(
@@ -53,7 +53,8 @@ namespace MC
         float &isoLevel,
         float &tempIsoLevel,
         const VolumeData &volumeData,
-        unsigned int axisVAO);
+        unsigned int axisVAO,
+        unsigned int lineShaderProgram);
 
     // ui
     void setupImGui(GLFWwindow *window);

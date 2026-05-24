@@ -147,6 +147,18 @@ int main()
 
     // initialize ImGui
     setupImGui(window);
+    bool imguiInitialized = true;
+
+    auto cleanupAndExit = [&](int exitCode) {
+        if (imguiInitialized)
+        {
+            cleanupImGui();
+            imguiInitialized = false;
+        }
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return exitCode;
+    };
 
     // symbol for explosion axis recalculate
     bool recalculateExplosionAxis = false;
@@ -159,8 +171,8 @@ int main()
     if (!postProcessor.init(width, height))
     {
         std::cerr << "Failed to initialize post processor\n";
-        glfwTerminate();
-        return -1;
+        postProcessor.cleanup();
+        return cleanupAndExit(-1);
     }
 
     int lastWidth = width, lastHeight = height;
@@ -170,8 +182,8 @@ int main()
     if (filePath.empty())
     {
         std::cerr << "No file selected.\n";
-        glfwTerminate();
-        return -1;
+        postProcessor.cleanup();
+        return cleanupAndExit(-1);
     }
 
     // load volume data
@@ -179,8 +191,8 @@ int main()
     if (!loadNiiFile(filePath, volumeData))
     {
         std::cerr << "Failed to load file\n";
-        glfwTerminate();
-        return -1;
+        postProcessor.cleanup();
+        return cleanupAndExit(-1);
     }
 
     // initialize mesh and marching cubes
@@ -262,11 +274,13 @@ int main()
         if (!explodedView.enabled)
         {
             renderFrame(window, shaderProgram, VAO, mesh, MC::camera, isoLevel,
-                        tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor, axisVAO);
+                        tempIsoLevel, volumeData, currentExplosionStrategy, postProcessor,
+                        axisVAO, lineShaderProgram);
         }
         else
         {
-            renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData, axisVAO);
+            renderExplodedView(window, explodedView, shaderProgram, mesh, isoLevel, tempIsoLevel, volumeData,
+                               axisVAO, lineShaderProgram);
         }
 
         // explosion distance update after being controlled by ui
@@ -317,6 +331,8 @@ int main()
     postProcessor.cleanup();
     cleanupExplodedView(explodedView);
     cleanupImGui();
+    imguiInitialized = false;
+    glfwDestroyWindow(window);
 
     // terminate GLFW
     glfwTerminate();

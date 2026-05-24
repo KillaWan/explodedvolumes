@@ -609,7 +609,8 @@ void main() {
                      const Mesh &mesh, Camera &camera, float &isoLevel, float &tempIsoLevel,
                      const VolumeData &volumeData,
                      std::string &currentExplosionStrategy, PostProcess &postProcessor,
-                     unsigned int axisVAO)
+                     unsigned int axisVAO,
+                     unsigned int lineShaderProgram)
     {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
@@ -749,15 +750,14 @@ void main() {
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
-        unsigned int axisShader = createLineShaderProgram();
-        glUseProgram(axisShader);
+        glUseProgram(lineShaderProgram);
 
         // draw the axis only when showExplosionAxis is true
         if (showExplosionAxis)
         {
-            int axisModelLoc = glGetUniformLocation(axisShader, "model");
-            int axisViewLoc = glGetUniformLocation(axisShader, "view");
-            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            int axisModelLoc = glGetUniformLocation(lineShaderProgram, "model");
+            int axisViewLoc = glGetUniformLocation(lineShaderProgram, "view");
+            int axisProjLoc = glGetUniformLocation(lineShaderProgram, "projection");
             glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -780,12 +780,11 @@ void main() {
         // draw the axis only when showExplosionAxis is true
         if (showExplosionAxis)
         {
-            unsigned int axisShader = createLineShaderProgram();
-            glUseProgram(axisShader);
+            glUseProgram(lineShaderProgram);
 
-            int axisModelLoc = glGetUniformLocation(axisShader, "model");
-            int axisViewLoc = glGetUniformLocation(axisShader, "view");
-            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            int axisModelLoc = glGetUniformLocation(lineShaderProgram, "model");
+            int axisViewLoc = glGetUniformLocation(lineShaderProgram, "view");
+            int axisProjLoc = glGetUniformLocation(lineShaderProgram, "projection");
             glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -806,7 +805,8 @@ void main() {
         float &isoLevel,
         float &tempIsoLevel,
         const VolumeData &volumeData,
-        unsigned int axisVAO)
+        unsigned int axisVAO,
+        unsigned int lineShaderProgram)
     {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -963,12 +963,11 @@ void main() {
 
         if (showExplosionAxis)
         {
-            unsigned int axisShader = createLineShaderProgram();
-            glUseProgram(axisShader);
+            glUseProgram(lineShaderProgram);
 
-            int axisModelLoc = glGetUniformLocation(axisShader, "model");
-            int axisViewLoc = glGetUniformLocation(axisShader, "view");
-            int axisProjLoc = glGetUniformLocation(axisShader, "projection");
+            int axisModelLoc = glGetUniformLocation(lineShaderProgram, "model");
+            int axisViewLoc = glGetUniformLocation(lineShaderProgram, "view");
+            int axisProjLoc = glGetUniformLocation(lineShaderProgram, "projection");
             glUniformMatrix4fv(axisModelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glUniformMatrix4fv(axisViewLoc, 1, GL_FALSE, glm::value_ptr(view));
             glUniformMatrix4fv(axisProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -1104,6 +1103,7 @@ void main() {
         camera.rotationY = 0.0f;
 
         unsigned int shaderProgram = createShaderProgram();
+        unsigned int lineShaderProgram = createLineShaderProgram();
 
         unsigned int VAO, VBO, EBO;
         setupMesh(mesh, VAO, VBO, EBO);
@@ -1146,7 +1146,7 @@ void main() {
 
             renderFrame(window, shaderProgram, VAO, mesh, camera, isoLevel, tempIsoLevel,
                         volumeData, currentExplosionStrategy, postProcessor,
-                        axisVAO);
+                        axisVAO, lineShaderProgram);
 
             glfwSwapBuffers(window);
         }
@@ -1156,6 +1156,7 @@ void main() {
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
         glDeleteProgram(shaderProgram);
+        glDeleteProgram(lineShaderProgram);
 
         if (axisVAO != 0)
             glDeleteVertexArrays(1, &axisVAO);
