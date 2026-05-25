@@ -435,3 +435,5 @@ Controleer vóór het compileren of alle componenten van derden die in de lokale
 Het visualisatieconcept volgt het algemene idee van exploded-viewrepresentaties van complexe oppervlakken, met name:
 
 > Olga Karpenko, Wilmot Li, Niloy Mitra, and Maneesh Agrawala. **Exploded View Diagrams of Mathematical Surfaces.** *IEEE Transactions on Visualization and Computer Graphics*, 16(6), 2010, 1311–1318. DOI: `10.1109/TVCG.2010.151`.
+
+De auteurs danken M. Chamberland en H. van de Wetering voor hun begeleiding en waardevolle terugkoppeling tijdens de ontwikkeling van dit project.

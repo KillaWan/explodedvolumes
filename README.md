@@ -433,3 +433,5 @@ Before compiling, check the availability of all third-party components used in t
 The visualization concept follows the general idea of exploded-view representations of complex surfaces, especially:
 
 > Olga Karpenko, Wilmot Li, Niloy Mitra, and Maneesh Agrawala. **Exploded View Diagrams of Mathematical Surfaces.** *IEEE Transactions on Visualization and Computer Graphics*, 16(6), 2010, 1311–1318. DOI: `10.1109/TVCG.2010.151`.
+
+The authors gratefully acknowledge M. Chamberland and H. van de Wetering for their guidance and valuable feedback during the development of this project.

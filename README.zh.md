@@ -435,3 +435,5 @@ launch configuration 可以使用：
 本项目的可视化概念遵循复杂曲面爆炸视图表示的一般思路，特别是参考了：
 
 > Olga Karpenko, Wilmot Li, Niloy Mitra, and Maneesh Agrawala. **Exploded View Diagrams of Mathematical Surfaces.** *IEEE Transactions on Visualization and Computer Graphics*, 16(6), 2010, 1311–1318. DOI: `10.1109/TVCG.2010.151`.
+
+作者谨向 M. Chamberland 与 H. van de Wetering 致以诚挚谢意，感谢二位在本项目开发过程中所提供的指导与宝贵反馈。
