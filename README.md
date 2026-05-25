@@ -1,5 +1,7 @@
 # ExplodedVolumes
 
+[English](README.md) | [中文](README.zh.md) | [Nederlands](README.nl.md)
+
 ![Introduction](images/Screenshot_20240130_115627.png)
 
 **ExplodedVolumes** is a C++17/OpenGL application for interactive visualization of volumetric data. It loads NIfTI volume data, extracts an iso-surface with Marching Cubes, computes or selects an explosion axis, constructs cutting planes, separates the resulting components, and renders the result in both normal and exploded-view modes.
@@ -415,7 +417,7 @@ Use `${workspaceFolder}` rather than `${fileDirname}`. The latter changes depend
 
 ## 13. Third-Party Components and References
 
-Before redistribution, check the licenses of all third-party components used in the local build:
+Before compiling, check the availability of all third-party components used in the local build:
 
 - [GLFW](https://www.glfw.org/)
 - [GLAD](https://glad.dav1d.de/)
