@@ -131,8 +131,6 @@ A source-only copy of the project has the following approximate structure:
 
 The `dependencies/` directory is normally not committed. It should be created locally according to the platform-specific build instructions below.
 
-Input volume data is not required to be stored in the repository. For public releases, include only volume files that are public, licensed for redistribution, and properly de-identified where applicable.
-
 ---
 
 ## 6. Dependency Model
@@ -141,7 +139,7 @@ Input volume data is not required to be stored in the repository. For public rel
 
 This project is distributed as source code without third-party binary dependencies. This avoids shipping platform-specific libraries that may be incompatible with a different compiler, operating system, or CPU architecture.
 
-In practice, this means:
+In practice, this indicates:
 
 - do not expect a pre-filled dependency folder in a clean source archive;
 - reconstruct the dependency folder locally;

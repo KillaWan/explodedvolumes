@@ -133,8 +133,6 @@ Een broncode-only kopie van het project heeft bij benadering de volgende structu
 
 De map `dependencies/` wordt normaliter niet gecommit. Deze map dient lokaal te worden aangemaakt volgens de platformspecifieke bouwinstructies hieronder.
 
-Invoervolumes hoeven niet in de repository te worden opgeslagen. Bij publieke verspreiding mogen alleen volumegegevens worden opgenomen die openbaar zijn, een passende distributielicentie hebben en, indien van toepassing, correct zijn gedeïdentificeerd.
-
 ---
 
 ## 6. Afhankelijkhedenmodel
